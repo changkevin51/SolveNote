@@ -181,14 +181,12 @@ class MathExpressionAnalyzer {
     }
   }
 
-  /// Disposes of the analyzer and cancels any pending timers
   void dispose() {
     _pauseTimer?.cancel();
     _recentStrokes.clear();
     _detectedExpressions.clear();
   }
 
-  /// Gets statistics about the current analysis state (for debugging)
   Map<String, dynamic> getAnalysisStats() {
     return {
       'recentStrokesCount': _recentStrokes.length,
@@ -196,5 +194,23 @@ class MathExpressionAnalyzer {
       'lastStrokeTime': _lastStrokeTime?.toIso8601String(),
       'timerActive': _pauseTimer?.isActive ?? false,
     };
+  }
+
+  void refreshAnalysis(List<List<Stroke>> allPageStrokes) {
+    _pauseTimer?.cancel();
+    _recentStrokes.clear();
+
+    final allStrokes = <Stroke>[];
+    for (final pageStrokes in allPageStrokes) {
+      allStrokes.addAll(pageStrokes);
+    }
+
+    if (allStrokes.isEmpty) {
+      _clearExpressions();
+      return;
+    }
+
+    _recentStrokes = allStrokes;
+    _analyzeForMathExpressions();
   }
 }

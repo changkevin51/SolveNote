@@ -457,6 +457,9 @@ class EditorState extends State<Editor> {
       }
     });
 
+    // Refresh math expression analysis after undo
+    _refreshMathExpressionAnalysis();
+
     autosaveAfterDelay();
   }
 
@@ -490,6 +493,9 @@ class EditorState extends State<Editor> {
             colorChange: item.colorChange!
                 .map((key, value) => MapEntry(key, value.swap()))));
     }
+
+    // Refresh math expression analysis after redo
+    _refreshMathExpressionAnalysis();
   }
 
   int? onWhichPageIsFocalPoint(Offset focalPoint) {
@@ -565,9 +571,14 @@ class EditorState extends State<Editor> {
           .onDragStart(position, page, dragPageIndex!, currentPressure);
     } else if (currentTool is Eraser) {
       shouldPlayPencilSound = true;
-      for (Stroke stroke in (currentTool as Eraser)
-          .checkForOverlappingStrokes(position, page.strokes)) {
+      final overlappingStrokes = (currentTool as Eraser)
+          .checkForOverlappingStrokes(position, page.strokes);
+      for (Stroke stroke in overlappingStrokes) {
         page.strokes.remove(stroke);
+      }
+      // Notify math analyzer immediately when strokes are erased
+      if (overlappingStrokes.isNotEmpty) {
+        _mathAnalyzer.onStrokesRemoved(overlappingStrokes);
       }
       removeExcessPages();
     } else if (currentTool is Select) {
@@ -613,9 +624,14 @@ class EditorState extends State<Editor> {
       (currentTool as Pen).onDragUpdate(position, currentPressure);
       page.redrawStrokes();
     } else if (currentTool is Eraser) {
-      for (Stroke stroke in (currentTool as Eraser)
-          .checkForOverlappingStrokes(position, page.strokes)) {
+      final overlappingStrokes = (currentTool as Eraser)
+          .checkForOverlappingStrokes(position, page.strokes);
+      for (Stroke stroke in overlappingStrokes) {
         page.strokes.remove(stroke);
+      }
+      // Notify math analyzer immediately when strokes are erased
+      if (overlappingStrokes.isNotEmpty) {
+        _mathAnalyzer.onStrokesRemoved(overlappingStrokes);
       }
       page.redrawStrokes();
       removeExcessPages();
@@ -1967,6 +1983,10 @@ class EditorState extends State<Editor> {
         strokes: removedStrokes,
         images: removedImages,
       ));
+
+      // Refresh math expression analysis after clearing page
+      _refreshMathExpressionAnalysis();
+
       autosaveAfterDelay();
     });
   }
@@ -2085,6 +2105,12 @@ class EditorState extends State<Editor> {
     log.info('Solve button pressed for expression ${expression.id}');
     // TODO: Implement actual math solving functionality
     // For now, just show that the button works
+  }
+
+  /// Refreshes math expression analysis for all strokes on all pages
+  void _refreshMathExpressionAnalysis() {
+    final allPageStrokes = coreInfo.pages.map((page) => page.strokes).toList();
+    _mathAnalyzer.refreshAnalysis(allPageStrokes);
   }
 
   @override
