@@ -1,0 +1,94 @@
+name: Build for iOS
+
+# Using instructions from
+# https://docs.flutter.dev/deployment/ios#create-a-build-archive-with-codemagic-cli-tools
+
+on:
+  # Enable manual run
+  workflow_dispatch:
+  push:
+    tags:
+      - '**'
+    branches:
+      - '**'
+    paths:
+      - .github/workflows/ios.yml
+
+jobs:
+  build-ios:
+    name: Build for iOS
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      APP_STORE_CONNECT_ISSUER_ID: ${{secrets.APP_STORE_CONNECT_ISSUER_ID}}
+      APP_STORE_CONNECT_KEY_IDENTIFIER: ${{secrets.APP_STORE_CONNECT_KEY_IDENTIFIER}}
+      APP_STORE_CONNECT_PRIVATE_KEY: ${{secrets.APP_STORE_CONNECT_PRIVATE_KEY}}
+      APP_STORE_CERTIFICATE_KEY: ${{secrets.APP_STORE_CERTIFICATE_KEY}}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          cache-key: 'flutter-:os:-:channel:-:version:-:arch:'
+          architecture: x64
+
+      - name: Install Codemagic CLI Tools
+        run: |
+          brew install pipx
+          pipx install codemagic-cli-tools
+
+      - name: Setup keychain
+        run: |
+          keychain initialize
+
+          app-store-connect fetch-signing-files $(xcode-project detect-bundle-id) \
+            --platform IOS \
+            --type IOS_APP_STORE \
+            --certificate-key=@env:APP_STORE_CERTIFICATE_KEY \
+            --create
+
+          keychain add-certificates
+
+          xcode-project use-profiles
+
+      - name: Disable Flutter CLI animations
+        run: flutter config --no-cli-animations
+
+      - run: flutter pub get
+      - run: find . -name "Podfile" -execdir pod install \;
+
+      - name: Build for iOS
+        run: |
+          flutter build ipa \
+            --dart-define=FLAVOR="App Store" \
+            --dart-define=APP_STORE="App Store" \
+            --dart-define=UPDATE_CHECK="false" \
+            --dart-define=DIRTY="false" \
+            --export-options-plist=$HOME/export_options.plist
+
+      - name: Move IPA
+        id: move
+        run: |
+          brew install grep
+          buildName=$(ggrep -oP "(?<=buildName = ').*(?=')" lib/data/version.dart)
+          export ipaPath="Saber_v${buildName}.ipa"
+          mv $(find $(pwd) -name "*.ipa") $ipaPath
+          echo "ipaPath=$ipaPath" >> $GITHUB_OUTPUT
+
+      - name: Restore keychain
+        run: |
+          keychain use-login
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Saber-iOS-Archive
+          path: ${{ steps.move.outputs.ipaPath }}
+
+      - name: Publish to App Store
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: app-store-connect publish --path ${{ steps.move.outputs.ipaPath }}
