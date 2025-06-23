@@ -107,6 +107,11 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
           pageIndex = widget.expression.strokes.first.pageIndex;
         }
 
+        // Guard against invalid page index
+        if (pageIndex < 0 || pageIndex >= widget.pages.length) {
+          return const SizedBox.shrink();
+        }
+
         final screenWidth = MediaQuery.of(context).size.width;
         final currentPage = widget.pages[pageIndex];
         final pageSize = currentPage.size;
