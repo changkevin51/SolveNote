@@ -56,6 +56,9 @@ import 'package:saber/pages/home/whiteboard.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:super_clipboard/super_clipboard.dart';
 import 'package:image/image.dart' as img;
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+import 'package:saber/components/canvas/_canvas_painter.dart';
 
 typedef _PhotoInfo = ({Uint8List bytes, String extension});
 
@@ -2118,39 +2121,63 @@ class EditorState extends State<Editor> {
   }
 
   Future<Uint8List?> _captureExpression(MathExpression expression) async {
-    final imageBytes = await _screenshotController.capture(
-      pixelRatio: 1.5, // Increase pixel ratio for better quality
+    final bounds = expression.boundingBox.toRect();
+    if (bounds.isEmpty) return null;
+
+    const padding = 16.0;
+    const scale = 1.5;
+
+    final pictureRecorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(pictureRecorder);
+
+    // Set a white background
+    canvas.drawRect(
+      Rect.fromLTWH(
+          0, 0, bounds.width + padding * 2, bounds.height + padding * 2),
+      Paint()..color = Colors.white,
     );
-    if (imageBytes == null) return null;
+    canvas.save();
+    canvas.translate(padding, padding);
 
-    final image = img.decodeImage(imageBytes);
-    if (image == null) return null;
-
-    final pageIndex = expression.strokes.first.pageIndex;
-    final page = coreInfo.pages[pageIndex];
-    final pageTopLeft = Offset(
-      (MediaQuery.of(context).size.width - page.size.width) / 2,
-      _getPageYOffset(pageIndex),
+    // Draw the strokes
+    final painter = CanvasPainter(
+      strokes: expression.strokes,
+      laserStrokes: [],
+      currentStroke: null,
+      currentSelection: null,
+      primaryColor: Colors.black,
+      page: EditorPage(),
+      showPageIndicator: false,
+      pageIndex: 0,
+      totalPages: 1,
+      currentScale: scale,
     );
 
-    final boundingBox = expression.boundingBox.toRect();
-    final croppedImage = img.copyCrop(
-      image,
-      x: ((boundingBox.left + pageTopLeft.dx) * 1.5).toInt(),
-      y: ((boundingBox.top + pageTopLeft.dy) * 1.5).toInt(),
-      width: (boundingBox.width * 1.5).toInt(),
-      height: (boundingBox.height * 1.5).toInt(),
+    // Translate the canvas so the expression is drawn at the origin
+    canvas.translate(-bounds.left, -bounds.top);
+    painter.paint(canvas, bounds.size);
+    canvas.restore();
+
+    final picture = pictureRecorder.endRecording();
+    final image = await picture.toImage(
+      ((bounds.width + padding * 2) * scale).toInt(),
+      ((bounds.height + padding * 2) * scale).toInt(),
     );
 
-    return Uint8List.fromList(img.encodePng(croppedImage));
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData == null) return null;
+
+    return byteData.buffer.asUint8List();
   }
 
   double _getPageYOffset(int pageIndex) {
+    final screenWidth = MediaQuery.of(context).size.width;
     double yOffset = 30; // Initial top gap for first page
     for (int i = 0; i < pageIndex; i++) {
       final page = coreInfo.pages[i];
+      final pageWidthFitted = math.min(page.size.width, screenWidth);
       yOffset +=
-          page.size.height * (page.size.width / page.size.width) + 16; // Gap
+          page.size.height * (pageWidthFitted / page.size.width) + 16; // Gap
     }
     return yOffset;
   }

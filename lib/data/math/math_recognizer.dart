@@ -12,7 +12,7 @@ class MathRecognizer {
 
   Future<Map<String, String>?> recognize(Uint8List imageBytes) async {
     const url =
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
     final headers = {
       'Content-Type': 'application/json',
       'x-goog-api-key': _apiKey,
