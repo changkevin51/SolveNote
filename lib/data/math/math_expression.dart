@@ -19,6 +19,9 @@ class MathExpression {
   String? steps;
   String? errorMessage;
 
+  /// Whether the solution popup is currently visible.
+  bool isPopupVisible = false;
+
   MathExpression({
     required this.id,
     required this.strokes,

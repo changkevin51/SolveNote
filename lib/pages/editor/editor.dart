@@ -579,6 +579,32 @@ class EditorState extends State<Editor> {
     final position = page.renderBox!.globalToLocal(details.focalPoint);
     history.canRedo = false;
 
+    // Handle taps on math expressions
+    for (final expression in _detectedExpressions) {
+      if (expression.boundingBox.toRect().contains(position)) {
+        if (expression.solveState == MathExpressionSolveState.solved) {
+          setState(() {
+            expression.isPopupVisible = !expression.isPopupVisible;
+          });
+          // Prevent drawing when interacting with math solutions
+          return;
+        }
+      }
+    }
+
+    // Hide all popups if tapping outside of any expression
+    bool wasPopupVisible = false;
+    for (final expression in _detectedExpressions) {
+      if (expression.isPopupVisible) {
+        wasPopupVisible = true;
+        expression.isPopupVisible = false;
+      }
+    }
+    if (wasPopupVisible) {
+      setState(() {});
+      return;
+    }
+
     final bool shouldPlayPencilSound;
 
     if (currentTool is Pen) {
@@ -2185,6 +2211,12 @@ class EditorState extends State<Editor> {
   void _onSolveMathExpression(MathExpression expression) async {
     log.info('Solve button pressed for expression ${expression.id}');
     setState(() {
+      // Hide all other popups
+      for (final expr in _detectedExpressions) {
+        if (expr.id != expression.id) {
+          expr.isPopupVisible = false;
+        }
+      }
       expression.solveState = MathExpressionSolveState.solving;
     });
 
@@ -2197,6 +2229,7 @@ class EditorState extends State<Editor> {
           expression.solveState = MathExpressionSolveState.solved;
           expression.solution = result['solution'];
           expression.steps = result['steps'];
+          expression.isPopupVisible = true;
         });
       } else {
         setState(() {

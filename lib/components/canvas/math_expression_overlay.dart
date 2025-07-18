@@ -53,6 +53,10 @@ class MathExpressionOverlay extends StatelessWidget {
         return MathExpressionBoundingBox(
           expression: expression,
           onSolve: () => onSolveExpression(expression),
+          onTap: () {
+            expression.isPopupVisible = true;
+            (context as Element).markNeedsBuild();
+          },
           transformationController: transformationController,
           pages: pages,
         );
@@ -67,12 +71,14 @@ class MathExpressionBoundingBox extends StatefulWidget {
     super.key,
     required this.expression,
     required this.onSolve,
+    required this.onTap,
     required this.transformationController,
     required this.pages,
   });
 
   final MathExpression expression;
   final VoidCallback onSolve;
+  final VoidCallback onTap;
   final TransformationController transformationController;
   final List<EditorPage> pages;
 
@@ -174,6 +180,15 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
           transformedRect.bottom + padding,
         );
 
+        if (!widget.expression.isPopupVisible &&
+            widget.expression.solveState == MathExpressionSolveState.solved) {
+          return GestureDetector(
+            onTap: widget.onTap,
+            child:
+                _buildSolvedMinimizedState(context, expandedRect, scale, widget.onTap),
+          );
+        }
+
         return AnimatedBuilder(
           animation: _animationController,
           builder: (context, child) {
@@ -221,10 +236,85 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
       case MathExpressionSolveState.solving:
         return [_buildSolvingState()];
       case MathExpressionSolveState.solved:
-        return _buildSolvedState(context, expandedRect);
+        if (widget.expression.isPopupVisible) {
+          return _buildSolvedState(context, expandedRect);
+        }
+        return []; // Minimized view is handled outside
       case MathExpressionSolveState.error:
         return [_buildErrorState()];
     }
+  }
+
+  Widget _buildSolvedMinimizedState(
+      BuildContext context, Rect expandedRect, double scale, VoidCallback onTap) {
+    final theme = Theme.of(context);
+    final solution = widget.expression.solution ?? '';
+
+    final textStyle = theme.textTheme.bodyMedium!.copyWith(
+      color: theme.colorScheme.onSurface,
+      fontSize: 12 * scale,
+    );
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // Faint dashed bounding box
+        Positioned(
+          left: expandedRect.left,
+          top: expandedRect.top,
+          width: expandedRect.width,
+          height: expandedRect.height,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Colors.grey.withOpacity(0.5),
+                width: 1.0,
+              ),
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+            child: CustomPaint(
+              painter: _DashedBorderPainter(
+                color: Colors.grey.withOpacity(0.7),
+                strokeWidth: 1.5,
+                borderRadius: 8.0,
+              ),
+            ),
+          ),
+        ),
+        // Answer text
+        Positioned(
+          left: expandedRect.left,
+          top: expandedRect.bottom + 4 * scale,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(4),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 3,
+                  offset: const Offset(0, 1),
+                )
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Answer: ',
+                  style: textStyle,
+                ),
+                Math.tex(
+                  solution,
+                  textStyle: textStyle,
+                )
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildIdleState() {
@@ -458,4 +548,50 @@ class _SolveButtonState extends State<_SolveButton>
       ),
     );
   }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double borderRadius;
+
+  _DashedBorderPainter({
+    required this.color,
+    this.strokeWidth = 1.0,
+    this.borderRadius = 0.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    const dashWidth = 5.0;
+    const dashSpace = 3.0;
+
+    final path = Path();
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(borderRadius),
+    );
+    path.addRRect(rrect);
+
+    final dashPath = Path();
+    for (final metric in path.computeMetrics()) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        dashPath.addPath(
+          metric.extractPath(distance, distance + dashWidth),
+          Offset.zero,
+        );
+        distance += dashWidth + dashSpace;
+      }
+    }
+    canvas.drawPath(dashPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
