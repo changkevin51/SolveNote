@@ -1,8 +1,34 @@
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:saber/data/math/math_expression.dart';
 import 'package:saber/data/editor/page.dart';
-import 'dart:math';
+import 'dart:math' as math;
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:markdown/markdown.dart' as md;
+
+class _MathSyntax extends md.InlineSyntax {
+  _MathSyntax() : super(r'(\$)(.*?)(\$)');
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    parser.addNode(md.Element.text('math', match[2]!));
+    return true;
+  }
+}
+
+class _MathBuilder extends MarkdownElementBuilder {
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    if (element.tag == 'math') {
+      return Math.tex(
+        element.textContent,
+        textStyle: preferredStyle,
+      );
+    }
+    return super.visitElementAfter(element, preferredStyle);
+  }
+}
 
 /// Overlay widget that displays visual bounding boxes around detected math expressions
 class MathExpressionOverlay extends StatelessWidget {
@@ -115,7 +141,7 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
         final screenWidth = MediaQuery.of(context).size.width;
         final currentPage = widget.pages[pageIndex];
         final pageSize = currentPage.size;
-        final pageWidthFitted = min(pageSize.width, screenWidth);
+        final pageWidthFitted = math.min(pageSize.width, screenWidth);
 
         final double pageOffsetX = (screenWidth > pageWidthFitted)
             ? (screenWidth - pageWidthFitted) / 2
@@ -123,7 +149,7 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
         double pageOffsetY = 30; // Initial top gap for first page
         for (int i = 0; i < pageIndex && i < widget.pages.length; i++) {
           final pageSize = widget.pages[i].size;
-          final pageWidthFitted = min(pageSize.width, screenWidth);
+          final pageWidthFitted = math.min(pageSize.width, screenWidth);
 
           pageOffsetY += pageSize.height * (pageWidthFitted / pageSize.width);
           pageOffsetY += 16; // Gap after each page
@@ -161,13 +187,14 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
                 child: Transform.scale(
                   scale: _scaleAnimation.value,
                   child: Stack(
+                    clipBehavior: Clip.none,
                     children: [
                       // Bounding box background
                       Container(
                         width: expandedRect.width,
                         height: expandedRect.height,
                         decoration: BoxDecoration(
-                          color: Colors.blue.withValues(alpha: 0.1),
+                          color: Colors.blue.withOpacity(0.1),
                           border: Border.all(
                             color: Colors.blue,
                             width: 2.0,
@@ -175,19 +202,7 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
                           borderRadius: BorderRadius.circular(8.0),
                         ),
                       ),
-                      // Solve button positioned near the top-right corner of the box
-                      Positioned(
-                        right: 4,
-                        top: 4,
-                        child: _SolveButton(
-                          onPressed: () {
-                            // Use qualified import to avoid ambiguity with dart:math
-                            developer.log(
-                                'Solve button pressed for expression ${widget.expression.id}');
-                            widget.onSolve();
-                          },
-                        ),
-                      ),
+                      ..._buildContent(context, expandedRect),
                     ],
                   ),
                 ),
@@ -196,6 +211,148 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
           },
         );
       },
+    );
+  }
+
+  List<Widget> _buildContent(BuildContext context, Rect expandedRect) {
+    switch (widget.expression.solveState) {
+      case MathExpressionSolveState.idle:
+        return [_buildIdleState()];
+      case MathExpressionSolveState.solving:
+        return [_buildSolvingState()];
+      case MathExpressionSolveState.solved:
+        return _buildSolvedState(context, expandedRect);
+      case MathExpressionSolveState.error:
+        return [_buildErrorState()];
+    }
+  }
+
+  Widget _buildIdleState() {
+    return Positioned(
+      right: 4,
+      top: 4,
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        child: _SolveButton(
+          onPressed: () {
+            developer.log(
+                'Solve button pressed for expression ${widget.expression.id}');
+            widget.onSolve();
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSolvingState() {
+    return const Center(
+      child: CircularProgressIndicator(),
+    );
+  }
+
+  List<Widget> _buildSolvedState(BuildContext context, Rect expandedRect) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final spaceAbove = expandedRect.top;
+    final spaceBelow = screenHeight - expandedRect.bottom;
+
+    // Display above if there's not enough space below, but more space above.
+    // Heuristic: 200px is a reasonable minimum height for the solution popup.
+    final bool displayAbove = spaceBelow < 200 && spaceAbove > spaceBelow;
+
+    final maxHeight = (displayAbove ? spaceAbove : spaceBelow) - 20;
+
+    final solutionWidget = Positioned(
+      top: displayAbove ? null : expandedRect.bottom + 5,
+      bottom: displayAbove ? (screenHeight - expandedRect.top + 5) : null,
+      left: 0,
+      width: expandedRect.width,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight < 0 ? 0 : maxHeight),
+        child: Listener(
+          behavior: HitTestBehavior.opaque,
+          child: Card(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.expression.solution != null)
+                      Container(
+                        padding: const EdgeInsets.all(8.0),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(4.0),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Answer:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Math.tex(
+                                widget.expression.solution!,
+                                textStyle: TextStyle(
+                                  fontSize: 20,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (widget.expression.steps != null) ...[
+                      const SizedBox(height: 8),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      MarkdownBody(
+                        data: widget.expression.steps!,
+                        builders: {
+                          'math': _MathBuilder(),
+                        },
+                        inlineSyntaxes: [
+                          _MathSyntax(),
+                        ],
+                        extensionSet: md.ExtensionSet.gitHubWeb,
+                      ),
+                    ]
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    return [solutionWidget];
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error, color: Colors.red, size: 48),
+          const SizedBox(height: 8),
+          Text(
+            widget.expression.errorMessage ?? 'An unknown error occurred.',
+            style: const TextStyle(color: Colors.red),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }

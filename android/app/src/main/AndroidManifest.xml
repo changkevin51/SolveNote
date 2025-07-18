@@ -29,10 +29,10 @@
         android:fullBackupContent="false"
         android:launchMode="singleTask"
         android:enableOnBackInvokedCallback="true"
-        tools:targetApi="donut"
-        tools:replace="android:label,android:allowBackup">
+        tools:targetApi="tiramisu"
+        tools:replace="android:label,android:allowBackup,android:supportsRtl">
         <activity
-            android:name=".MainActivity"
+            android:name="io.flutter.embedding.android.FlutterActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""

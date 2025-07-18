@@ -145,6 +145,10 @@ class Stroke {
     }..addAll(options.toJson());
   }
 
+  Map<String, dynamic> toMap() {
+    return toJson();
+  }
+
   void addPoint(Offset point, [double? pressure]) {
     if (!pressureEnabled) {
       pressure = null;

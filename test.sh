@@ -93,3 +93,4 @@ fi
 
 docker exec -it "$CONTAINER_NAME" flutter test "$@"
 exit $?
+P

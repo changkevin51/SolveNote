@@ -1,5 +1,10 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/painting.dart';
 import 'package:saber/components/canvas/_stroke.dart';
+
+enum MathExpressionSolveState { idle, solving, solved, error }
 
 /// Represents a detected mathematical expression
 class MathExpression {
@@ -8,6 +13,11 @@ class MathExpression {
   final BoundingBox boundingBox;
   final DateTime createdAt;
   bool isSelected;
+
+  MathExpressionSolveState solveState = MathExpressionSolveState.idle;
+  String? solution;
+  String? steps;
+  String? errorMessage;
 
   MathExpression({
     required this.id,
@@ -19,7 +29,8 @@ class MathExpression {
 
   /// Generates a unique ID for the expression
   static String generateId() {
-    return '${DateTime.now().millisecondsSinceEpoch}_${(DateTime.now().microsecond * 1000).toString().substring(0, 6)}';
+    final random = Random().nextInt(100000).toString().padLeft(6, '0');
+    return '${DateTime.now().millisecondsSinceEpoch}_$random';
   }
 
   /// Creates a copy of this expression with updated values
@@ -29,14 +40,23 @@ class MathExpression {
     BoundingBox? boundingBox,
     DateTime? createdAt,
     bool? isSelected,
+    MathExpressionSolveState? solveState,
+    String? solution,
+    String? steps,
+    String? errorMessage,
   }) {
-    return MathExpression(
+    final newExpr = MathExpression(
       id: id ?? this.id,
       strokes: strokes ?? this.strokes,
       boundingBox: boundingBox ?? this.boundingBox,
       createdAt: createdAt ?? this.createdAt,
       isSelected: isSelected ?? this.isSelected,
     );
+    newExpr.solveState = solveState ?? this.solveState;
+    newExpr.solution = solution ?? this.solution;
+    newExpr.steps = steps ?? this.steps;
+    newExpr.errorMessage = errorMessage ?? this.errorMessage;
+    return newExpr;
   }
 
   /// Checks if this expression is empty (no strokes)
@@ -47,6 +67,15 @@ class MathExpression {
 
   /// Gets the height of the expression
   double get height => boundingBox.maxY - boundingBox.minY;
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'strokes': strokes.map((s) => s.toMap()).toList(),
+      'boundingBox': boundingBox.toMap(),
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
 }
 
 /// Represents a bounding box for a math expression
@@ -62,6 +91,15 @@ class BoundingBox {
     required this.minY,
     required this.maxY,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'minX': minX,
+      'minY': minY,
+      'maxX': maxX,
+      'maxY': maxY,
+    };
+  }
 
   /// Creates a bounding box from a list of strokes
   factory BoundingBox.fromStrokes(List<Stroke> strokes) {
@@ -132,29 +170,4 @@ class BoundingBox {
 
   /// Converts to a Flutter Rect
   Rect toRect() => Rect.fromLTRB(minX, minY, maxX, maxY);
-}
-
-/// Result of stroke grouping for math expression detection
-class StrokeGroup {
-  final List<Stroke> strokes;
-  final BoundingBox boundingBox;
-
-  StrokeGroup({
-    required this.strokes,
-    required this.boundingBox,
-  });
-
-  /// Creates a stroke group from a list of strokes
-  factory StrokeGroup.fromStrokes(List<Stroke> strokes) {
-    return StrokeGroup(
-      strokes: strokes,
-      boundingBox: BoundingBox.fromStrokes(strokes),
-    );
-  }
-
-  /// Checks if this group is empty
-  bool get isEmpty => strokes.isEmpty;
-
-  /// Gets the number of strokes in this group
-  int get length => strokes.length;
 }

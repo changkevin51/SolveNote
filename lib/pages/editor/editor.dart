@@ -8,6 +8,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_quill/flutter_quill.dart' as flutter_quill;
 import 'package:keybinder/keybinder.dart';
 import 'package:logging/logging.dart';
@@ -48,11 +49,13 @@ import 'package:saber/data/tools/select.dart';
 import 'package:saber/components/canvas/math_expression_overlay.dart';
 import 'package:saber/data/math/math_expression.dart';
 import 'package:saber/data/math/math_expression_analyzer.dart';
+import 'package:saber/data/math/math_recognizer.dart';
 import 'package:saber/data/tools/shape_pen.dart';
 import 'package:saber/i18n/strings.g.dart';
 import 'package:saber/pages/home/whiteboard.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:super_clipboard/super_clipboard.dart';
+import 'package:image/image.dart' as img;
 
 typedef _PhotoInfo = ({Uint8List bytes, String extension});
 
@@ -103,6 +106,9 @@ class Editor extends StatefulWidget {
 
 class EditorState extends State<Editor> {
   final log = Logger('EditorState');
+  final _screenshotController = ScreenshotController();
+  late final MathRecognizer _mathRecognizer =
+      MathRecognizer(dotenv.env['GEMINI_API_KEY']!);
 
   late EditorCoreInfo coreInfo = EditorCoreInfo(filePath: '');
 
@@ -181,7 +187,14 @@ class EditorState extends State<Editor> {
   bool stylusButtonPressed = false;
 
   // Math expression analysis
-  late MathExpressionAnalyzer _mathAnalyzer;
+  late MathExpressionAnalyzer _mathExpressionAnalyzer = MathExpressionAnalyzer(
+    onExpressionsDetected: (expressions) {
+      setState(() {});
+    },
+    onExpressionsCleared: () {
+      setState(() {});
+    },
+  );
   List<MathExpression> _detectedExpressions = [];
 
   @override
@@ -189,7 +202,7 @@ class EditorState extends State<Editor> {
     DynamicMaterialApp.addFullscreenListener(_setState);
 
     // Initialize math expression analyzer
-    _mathAnalyzer = MathExpressionAnalyzer(
+    _mathExpressionAnalyzer = MathExpressionAnalyzer(
       onExpressionsDetected: _onMathExpressionsDetected,
       onExpressionsCleared: _onMathExpressionsCleared,
     );
@@ -578,7 +591,7 @@ class EditorState extends State<Editor> {
       }
       // Notify math analyzer immediately when strokes are erased
       if (overlappingStrokes.isNotEmpty) {
-        _mathAnalyzer.onStrokesRemoved(overlappingStrokes);
+        _mathExpressionAnalyzer.onStrokesRemoved(overlappingStrokes);
       }
       removeExcessPages();
     } else if (currentTool is Select) {
@@ -631,7 +644,7 @@ class EditorState extends State<Editor> {
       }
       // Notify math analyzer immediately when strokes are erased
       if (overlappingStrokes.isNotEmpty) {
-        _mathAnalyzer.onStrokesRemoved(overlappingStrokes);
+        _mathExpressionAnalyzer.onStrokesRemoved(overlappingStrokes);
       }
       page.redrawStrokes();
       removeExcessPages();
@@ -676,7 +689,7 @@ class EditorState extends State<Editor> {
         page.insertStroke(newStroke);
 
         // Notify math expression analyzer of new stroke
-        _mathAnalyzer.onStrokeAdded(newStroke);
+        _mathExpressionAnalyzer.onStrokeAdded(newStroke);
 
         history.recordChange(EditorHistoryItem(
           type: EditorHistoryItemType.draw,
@@ -696,7 +709,7 @@ class EditorState extends State<Editor> {
         if (erased.isEmpty) return;
 
         // Notify math expression analyzer of erased strokes
-        _mathAnalyzer.onStrokesRemoved(erased);
+        _mathExpressionAnalyzer.onStrokesRemoved(erased);
 
         history.recordChange(EditorHistoryItem(
           type: EditorHistoryItemType.erase,
@@ -1370,56 +1383,59 @@ class EditorState extends State<Editor> {
         Prefs.editorToolbarAlignment.value == AxisDirection.left ||
             Prefs.editorToolbarAlignment.value == AxisDirection.right;
 
-    final Widget canvas = Stack(
-      children: [
-        CanvasGestureDetector(
-          key: _canvasGestureDetectorKey,
-          filePath: coreInfo.filePath,
-          isDrawGesture: isDrawGesture,
-          onInteractionEnd: onInteractionEnd,
-          onDrawStart: onDrawStart,
-          onDrawUpdate: onDrawUpdate,
-          onDrawEnd: onDrawEnd,
-          onHovering: onHovering,
-          onHoveringEnd: onHoveringEnd,
-          onStylusButtonChanged: onStylusButtonChanged,
-          onPressureChanged: onPressureChanged,
-          undo: undo,
-          redo: redo,
-          pages: coreInfo.pages,
-          initialPageIndex: coreInfo.initialPageIndex,
-          pageBuilder: pageBuilder,
-          isTextEditing: () => currentTool == Tool.textEditing,
-          placeholderPageBuilder: (BuildContext context, int pageIndex) {
-            return Canvas(
-              path: coreInfo.filePath,
-              page: coreInfo.pages[pageIndex],
-              pageIndex: 0,
-              textEditing: false,
-              coreInfo: EditorCoreInfo.empty,
-              currentStroke: null,
-              currentStrokeDetectedShape: null,
-              currentSelection: null,
-              placeholder: true,
-              setAsBackground: null,
-              currentToolIsSelect: currentTool is Select,
-              currentScale: double.minPositive,
-            );
-          },
-          transformationController: _transformationController,
-        ),
-        // Math expression overlay
-        if (_detectedExpressions.isNotEmpty)
-          MathExpressionOverlay(
-            expressions: _detectedExpressions,
-            onSolveExpression: _onSolveMathExpression,
-            canvasSize: coreInfo.pages.isNotEmpty
-                ? coreInfo.pages.first.size
-                : Size.zero,
-            transformationController: _transformationController,
+    final Widget canvas = Screenshot(
+      controller: _screenshotController,
+      child: Stack(
+        children: [
+          CanvasGestureDetector(
+            key: _canvasGestureDetectorKey,
+            filePath: coreInfo.filePath,
+            isDrawGesture: isDrawGesture,
+            onInteractionEnd: onInteractionEnd,
+            onDrawStart: onDrawStart,
+            onDrawUpdate: onDrawUpdate,
+            onDrawEnd: onDrawEnd,
+            onHovering: onHovering,
+            onHoveringEnd: onHoveringEnd,
+            onStylusButtonChanged: onStylusButtonChanged,
+            onPressureChanged: onPressureChanged,
+            undo: undo,
+            redo: redo,
             pages: coreInfo.pages,
+            initialPageIndex: coreInfo.initialPageIndex,
+            pageBuilder: pageBuilder,
+            isTextEditing: () => currentTool == Tool.textEditing,
+            placeholderPageBuilder: (BuildContext context, int pageIndex) {
+              return Canvas(
+                path: coreInfo.filePath,
+                page: coreInfo.pages[pageIndex],
+                pageIndex: 0,
+                textEditing: false,
+                coreInfo: EditorCoreInfo.empty,
+                currentStroke: null,
+                currentStrokeDetectedShape: null,
+                currentSelection: null,
+                placeholder: true,
+                setAsBackground: null,
+                currentToolIsSelect: currentTool is Select,
+                currentScale: double.minPositive,
+              );
+            },
+            transformationController: _transformationController,
           ),
-      ],
+          // Math expression overlay
+          if (_detectedExpressions.isNotEmpty)
+            MathExpressionOverlay(
+              expressions: _detectedExpressions,
+              onSolveExpression: _onSolveMathExpression,
+              canvasSize: coreInfo.pages.isNotEmpty
+                  ? coreInfo.pages.first.size
+                  : Size.zero,
+              transformationController: _transformationController,
+              pages: coreInfo.pages,
+            ),
+        ],
+      ),
     );
 
     final Widget? readonlyBanner = coreInfo.readOnlyBecauseOfVersion
@@ -2005,7 +2021,7 @@ class EditorState extends State<Editor> {
       removeExcessPages();
 
       // Notify math expression analyzer that all strokes are cleared
-      _mathAnalyzer.onAllStrokesCleared();
+      _mathExpressionAnalyzer.onAllStrokesCleared();
 
       history.recordChange(EditorHistoryItem(
         type: EditorHistoryItemType.erase,
@@ -2101,16 +2117,78 @@ class EditorState extends State<Editor> {
     log.info('Math expressions cleared');
   }
 
-  void _onSolveMathExpression(MathExpression expression) {
+  Future<Uint8List?> _captureExpression(MathExpression expression) async {
+    final imageBytes = await _screenshotController.capture(
+      pixelRatio: 1.5, // Increase pixel ratio for better quality
+    );
+    if (imageBytes == null) return null;
+
+    final image = img.decodeImage(imageBytes);
+    if (image == null) return null;
+
+    final pageIndex = expression.strokes.first.pageIndex;
+    final page = coreInfo.pages[pageIndex];
+    final pageTopLeft = Offset(
+      (MediaQuery.of(context).size.width - page.size.width) / 2,
+      _getPageYOffset(pageIndex),
+    );
+
+    final boundingBox = expression.boundingBox.toRect();
+    final croppedImage = img.copyCrop(
+      image,
+      x: ((boundingBox.left + pageTopLeft.dx) * 1.5).toInt(),
+      y: ((boundingBox.top + pageTopLeft.dy) * 1.5).toInt(),
+      width: (boundingBox.width * 1.5).toInt(),
+      height: (boundingBox.height * 1.5).toInt(),
+    );
+
+    return Uint8List.fromList(img.encodePng(croppedImage));
+  }
+
+  double _getPageYOffset(int pageIndex) {
+    double yOffset = 30; // Initial top gap for first page
+    for (int i = 0; i < pageIndex; i++) {
+      final page = coreInfo.pages[i];
+      yOffset +=
+          page.size.height * (page.size.width / page.size.width) + 16; // Gap
+    }
+    return yOffset;
+  }
+
+  void _onSolveMathExpression(MathExpression expression) async {
     log.info('Solve button pressed for expression ${expression.id}');
-    // TODO: Implement actual math solving functionality
-    // For now, just show that the button works
+    setState(() {
+      expression.solveState = MathExpressionSolveState.solving;
+    });
+
+    final imageBytes = await _captureExpression(expression);
+
+    if (imageBytes != null) {
+      final result = await _mathRecognizer.recognize(imageBytes);
+      if (result != null) {
+        setState(() {
+          expression.solveState = MathExpressionSolveState.solved;
+          expression.solution = result['solution'];
+          expression.steps = result['steps'];
+        });
+      } else {
+        setState(() {
+          expression.solveState = MathExpressionSolveState.error;
+          expression.errorMessage = 'Failed to recognize expression.';
+        });
+      }
+    } else {
+      setState(() {
+        expression.solveState = MathExpressionSolveState.error;
+        expression.errorMessage = 'Failed to capture expression image.';
+      });
+    }
   }
 
   /// Refreshes math expression analysis for all strokes on all pages
   void _refreshMathExpressionAnalysis() {
     final allPageStrokes = coreInfo.pages.map((page) => page.strokes).toList();
-    _mathAnalyzer.refreshAnalysis(allPageStrokes);
+    _mathExpressionAnalyzer.refreshAnalysis(allPageStrokes);
   }
 
   @override
@@ -2131,7 +2209,7 @@ class EditorState extends State<Editor> {
     _lastSeenPointerCountTimer?.cancel();
 
     // Dispose math expression analyzer
-    _mathAnalyzer.dispose();
+    _mathExpressionAnalyzer.dispose();
 
     _removeKeybindings();
 

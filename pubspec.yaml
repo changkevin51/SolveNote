@@ -145,6 +145,10 @@ dependencies:
 
   pdfrx: ^1.0.85
   path: ^1.9.1
+  flutter_math_fork: ^0.7.4
+  flutter_dotenv: ^5.2.1
+  image: ^4.5.4
+  flutter_markdown: ^0.7.7+1
 
 dev_dependencies:
   flutter_test:
@@ -192,9 +196,10 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/icon/icon.svg
-    - assets/images/
+    - .env
+    - assets/google_fonts/
     - assets/google_fonts/Atkinson_Hyperlegible/
     - assets/google_fonts/Dekko/
     - assets/google_fonts/Fira_Mono/

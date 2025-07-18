@@ -1,13 +1,10 @@
-import 'package:saber/data/flavor_config.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:saber/main_common.dart' as common;
+import 'package:saber/data/flavor_config.dart';
 
 Future<void> main(List<String> args) async {
-  /// To set the flavor config e.g. for the Play Store, use:
-  /// flutter build \
-  ///   --dart-define=FLAVOR="Google Play" \
-  ///   --dart-define=APP_STORE="Google Play" \
-  ///   --dart-define=UPDATE_CHECK="false" \
-  ///   --dart-define=DIRTY="false"
+  await dotenv.load(fileName: ".env");
   FlavorConfig.setup(
     flavor: const String.fromEnvironment('FLAVOR'),
     appStore: const String.fromEnvironment('APP_STORE'),

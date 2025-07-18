@@ -59,7 +59,19 @@ android {
     }
 
     packaging {
-        jniLibs.pickFirsts.add("lib/*/libc++_shared.so")
+        jniLibs {
+            // CORRECT WAY: This prevents duplicate library errors without removing the critical file.
+            pickFirsts.add("lib/*/libc++_shared.so")
+        }
+        resources {
+            // You can leave this exclude here or remove it. The jniLibs one is the important one.
+            excludes.add("**/libc++_shared.so")
+        }
+    }
+
+    // This part is correct and necessary, keep it.
+    aaptOptions {
+        noCompress("conf", ".ttf", ".otf")
     }
 }
 
@@ -68,8 +80,9 @@ flutter {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.1.20")
+    // implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.1.20")
     implementation("com.google.android.material:material:1.12.0")
+    
 }
 
 val abiCodes = mapOf("armeabi-v7a" to 1, "arm64-v8a" to 2, "x86_64" to 3)

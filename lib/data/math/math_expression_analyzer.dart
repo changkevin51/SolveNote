@@ -1,8 +1,17 @@
 import 'dart:async';
 import 'dart:developer';
+import 'package:collection/collection.dart';
 
 import 'package:saber/components/canvas/_stroke.dart';
 import 'package:saber/data/math/math_expression.dart';
+
+class StrokeGroup {
+  final List<Stroke> strokes;
+  final BoundingBox boundingBox;
+
+  StrokeGroup.fromStrokes(this.strokes)
+      : boundingBox = BoundingBox.fromStrokes(strokes);
+}
 
 /// Service for analyzing strokes and detecting mathematical expressions
 /// This implements Phase 1 of the "Magic Button" plan
@@ -120,15 +129,24 @@ class MathExpressionAnalyzer {
     }
 
     // Convert groups to math expressions
-    final expressions = groups
-        .where((group) => group.strokes.isNotEmpty)
-        .map((group) => MathExpression(
-              id: MathExpression.generateId(),
-              strokes: group.strokes,
-              boundingBox: group.boundingBox,
-              createdAt: DateTime.now(),
-            ))
-        .toList();
+    final expressions =
+        groups.where((group) => group.strokes.isNotEmpty).map((group) {
+      final existing = _detectedExpressions.firstWhereOrNull(
+        (e) => e.strokes.every((s) => group.strokes.contains(s)),
+      );
+      if (existing != null) {
+        return existing.copyWith(
+          strokes: group.strokes,
+          boundingBox: group.boundingBox,
+        );
+      }
+      return MathExpression(
+        id: MathExpression.generateId(),
+        strokes: group.strokes,
+        boundingBox: group.boundingBox,
+        createdAt: DateTime.now(),
+      );
+    }).toList();
 
     _detectedExpressions = expressions;
     log('Detected ${expressions.length} math expressions');
