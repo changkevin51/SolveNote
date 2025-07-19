@@ -24,7 +24,7 @@ class MathRecognizer {
           "parts": [
             {
               "text":
-                  "Solve the math expression in this image step-by-step. Return a valid JSON object with two keys: 'solution' and 'steps'. The 'solution' key should contain the final answer as a LaTeX string. The 'steps' key should contain a list of strings, where each string is a detailed step in the solution. IMPORTANT: All LaTeX, including formulas, variables, and symbols, must be enclosed in single dollar signs (e.g., \$x^2 + y^2 = z^2\$). All backslashes in the LaTeX strings must be properly escaped for JSON (e.g., \"\\\\frac\" must be written as \"\\\\\\\\frac\")."
+                  "Solve the math expression in this image step-by-step. Return a valid JSON object with two keys: 'solution' and 'steps'. The 'solution' key should contain the final answer as a LaTeX string. The 'steps' key should contain a single markdown string with the detailed steps. IMPORTANT: In the markdown, all LaTeX (formulas, variables, symbols) must be enclosed in single dollar signs (e.g., \$x^2 + y^2 = z^2\$). Ensure backslashes in LaTeX are properly escaped for JSON (e.g., '\\frac' becomes '\\\\frac')."
             },
             {
               "inline_data": {
@@ -67,9 +67,7 @@ class MathRecognizer {
 
       return {
         'solution': cleanLatex(solutionMap['solution'] as String),
-        'steps': (solutionMap['steps'] as List<dynamic>)
-            .map((step) => (step as String).trim())
-            .join('\n\n'),
+        'steps': solutionMap['steps'] as String,
       };
     } else {
       print('Error: ${response.statusCode}');
