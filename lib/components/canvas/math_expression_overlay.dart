@@ -184,8 +184,8 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
             widget.expression.solveState == MathExpressionSolveState.solved) {
           return GestureDetector(
             onTap: widget.onTap,
-            child:
-                _buildSolvedMinimizedState(context, expandedRect, scale, widget.onTap),
+            child: _buildSolvedMinimizedState(
+                context, expandedRect, scale, widget.onTap),
           );
         }
 
@@ -245,8 +245,8 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
     }
   }
 
-  Widget _buildSolvedMinimizedState(
-      BuildContext context, Rect expandedRect, double scale, VoidCallback onTap) {
+  Widget _buildSolvedMinimizedState(BuildContext context, Rect expandedRect,
+      double scale, VoidCallback onTap) {
     final theme = Theme.of(context);
     final solution = widget.expression.solution ?? '';
 

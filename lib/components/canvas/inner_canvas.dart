@@ -32,6 +32,7 @@ class InnerCanvas extends StatefulWidget {
     this.hideBackground = false,
     required this.currentToolIsSelect,
     required this.currentScale,
+    required this.onLassoSolve,
   });
 
   final int pageIndex;
@@ -54,6 +55,9 @@ class InnerCanvas extends StatefulWidget {
   final bool currentToolIsSelect;
 
   final double currentScale;
+
+  /// Called when the user presses the Solve button for a lasso selection.
+  final void Function(SelectResult) onLassoSolve;
 
   static const Color defaultBackgroundColor = Color(0xFFFCFCFC);
 
@@ -185,6 +189,16 @@ class _InnerCanvasState extends State<InnerCanvas> {
                     selected: widget.currentSelection?.images
                             .contains(page.images[i]) ??
                         false,
+                  ),
+                // --- LASSO SOLVE BUTTON OVERLAY ---
+                if (widget.currentToolIsSelect &&
+                    Select.currentSelect.doneSelecting &&
+                    Select.currentSelect.selectResult.strokes.isNotEmpty &&
+                    Select.currentSelect.selectResult.pageIndex ==
+                        widget.pageIndex)
+                  _LassoSolveButtonOverlay(
+                    selectResult: Select.currentSelect.selectResult,
+                    onSolve: widget.onLassoSolve,
                   ),
               ],
             ),
@@ -374,6 +388,58 @@ class _InnerCanvasState extends State<InnerCanvas> {
       ),
       sizeHuge: TextStyle(
         fontSize: textTheme.bodyLarge!.fontSize!,
+      ),
+    );
+  }
+}
+
+class _LassoSolveButtonOverlay extends StatelessWidget {
+  final SelectResult selectResult;
+  final void Function(SelectResult) onSolve;
+
+  const _LassoSolveButtonOverlay({
+    required this.selectResult,
+    required this.onSolve,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Compute bounding box of selected strokes
+    final strokes = selectResult.strokes;
+    if (strokes.isEmpty) return SizedBox.shrink();
+    double minX = double.infinity,
+        minY = double.infinity,
+        maxX = double.negativeInfinity,
+        maxY = double.negativeInfinity;
+    for (final stroke in strokes) {
+      for (final pt in stroke.highQualityPolygon) {
+        if (pt.dx < minX) minX = pt.dx;
+        if (pt.dx > maxX) maxX = pt.dx;
+        if (pt.dy < minY) minY = pt.dy;
+        if (pt.dy > maxY) maxY = pt.dy;
+      }
+    }
+    final box = Rect.fromLTRB(minX, minY, maxX, maxY);
+    // Place the button at the top-right of the bounding box
+    return Positioned(
+      left: box.right + 8,
+      top: box.top - 8,
+      child: Material(
+        color: Colors.transparent,
+        child: ElevatedButton.icon(
+          icon: Icon(Icons.calculate),
+          label: Text('Solve'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            foregroundColor: Theme.of(context).colorScheme.onPrimary,
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            elevation: 4,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          onPressed: () => onSolve(selectResult),
+        ),
       ),
     );
   }

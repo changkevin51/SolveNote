@@ -1448,6 +1448,7 @@ class EditorState extends State<Editor> {
                 setAsBackground: null,
                 currentToolIsSelect: currentTool is Select,
                 currentScale: double.minPositive,
+                onLassoSolve: (_) {},
               );
             },
             transformationController: _transformationController,
@@ -1922,6 +1923,24 @@ class EditorState extends State<Editor> {
       },
       currentToolIsSelect: currentTool is Select,
       currentScale: _transformationController.value.approxScale,
+      onLassoSolve: (selectResult) async {
+        // Create a MathExpression from the selected strokes
+        if (selectResult.strokes.isEmpty) return;
+        final expression = MathExpression(
+          id: MathExpression.generateId(),
+          strokes: List<Stroke>.from(selectResult.strokes),
+          boundingBox: BoundingBox.fromStrokes(selectResult.strokes),
+          createdAt: DateTime.now(),
+        );
+        setState(() {
+          _detectedExpressions = [expression];
+        });
+        _onSolveMathExpression(expression);
+        // Optionally clear selection after solving
+        setState(() {
+          Select.currentSelect.unselect();
+        });
+      },
     );
   }
 

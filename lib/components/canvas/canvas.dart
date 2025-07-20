@@ -23,6 +23,7 @@ class Canvas extends StatelessWidget {
     required this.currentToolIsSelect,
     required this.currentScale,
     this.placeholder = false,
+    required this.onLassoSolve,
   });
 
   final String path;
@@ -40,6 +41,9 @@ class Canvas extends StatelessWidget {
   final bool currentToolIsSelect;
   final double currentScale;
   final bool placeholder;
+
+  /// Called when the user presses the Solve button for a lasso selection.
+  final void Function(SelectResult) onLassoSolve;
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +80,7 @@ class Canvas extends StatelessWidget {
                         setAsBackground: setAsBackground,
                         currentToolIsSelect: currentToolIsSelect,
                         currentScale: currentScale,
+                        onLassoSolve: onLassoSolve,
                       ),
                     ),
                   ),

@@ -198,6 +198,7 @@ abstract class EditorExporter {
             currentSelection: null,
             currentToolIsSelect: false,
             currentScale: double.maxFinite,
+            onLassoSolve: (result) {},
           ),
         ),
       ),

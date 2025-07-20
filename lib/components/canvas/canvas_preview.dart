@@ -86,6 +86,7 @@ class CanvasPreview extends StatelessWidget implements PreferredSizeWidget {
       hideBackground: Prefs.hideHomeBackgrounds.value,
       currentToolIsSelect: false,
       currentScale: double.minPositive,
+      onLassoSolve: (result) {},
     );
   }
 }
