@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart';
 import 'package:http/io_client.dart';
@@ -18,7 +20,7 @@ extension NextcloudClientExtension on NextcloudClient {
       Uri.parse('https://nc.saber.adil.hanney.org');
 
   static final userAgent = 'Saber/$buildName '
-      '(${Platform.operatingSystem}) '
+      '(${kIsWeb ? 'Web' : Platform.operatingSystem}) '
       'Dart/${Platform.version.split(' ').first}';
   static IOClient newHttpClient() => IOClient(
         HttpClient()..userAgent = userAgent,

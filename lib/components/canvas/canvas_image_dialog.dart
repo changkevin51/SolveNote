@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:saber/components/canvas/image/editor_image.dart';
@@ -75,9 +76,10 @@ class _CanvasImageDialogState extends State<CanvasImageDialog> {
               bytes = switch (image.svgLoader) {
                 (SvgStringLoader loader) =>
                   utf8.encode(loader.provideSvg(null)),
-                (SvgFileLoader loader) => await loader.file.readAsBytes(),
-                (_) => throw ArgumentError.value(
-                    image.svgLoader, 'svgLoader', 'Unknown SVG loader type'),
+                (SvgFileLoader loader) when !kIsWeb =>
+                  await loader.file.readAsBytes(),
+                (_) => throw ArgumentError.value(image.svgLoader, 'svgLoader',
+                    'Unknown SVG loader type or not supported on web'),
               };
             case PngEditorImage image:
               if (image.imageProvider is MemoryImage) {

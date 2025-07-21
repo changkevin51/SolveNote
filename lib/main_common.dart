@@ -69,18 +69,18 @@ Future<void> main(
 
   await Future.wait([
     Prefs.customDataDir.waitUntilLoaded().then((_) => FileManager.init()),
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS)
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS))
       windowManager.ensureInitialized(),
     workerManager.init(),
     Prefs.locale.waitUntilLoaded(),
     Prefs.url.waitUntilLoaded(),
     Prefs.allowInsecureConnections.waitUntilLoaded(),
     PencilShader.init(),
-    PencilSound.preload(),
+    if (!kIsWeb) PencilSound.preload(),
     Printing.info().then((info) {
       Editor.canRasterPdf = info.canRaster;
     }),
-    OnyxSdkPenArea.init(),
+    if (!kIsWeb) OnyxSdkPenArea.init(),
   ]);
 
   setLocale();
@@ -99,7 +99,9 @@ Future<void> main(
     }
   });
 
-  HttpOverrides.global = NcHttpOverrides();
+  if (!kIsWeb) {
+    HttpOverrides.global = NcHttpOverrides();
+  }
   runApp(TranslationProvider(child: const App()));
   startSyncAfterLoaded();
   setupBackgroundSync();
@@ -136,7 +138,7 @@ void setLocale() {
 }
 
 void setupBackgroundSync() {
-  if (!Platform.isAndroid && !Platform.isIOS) return;
+  if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) return;
   if (!Prefs.syncInBackground.loaded) {
     return Prefs.syncInBackground.addListener(setupBackgroundSync);
   } else {
@@ -297,7 +299,7 @@ class _AppState extends State<App> {
   }
 
   void setupSharingIntent() {
-    if (Platform.isAndroid || Platform.isIOS) {
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       // for files opened while the app is closed
       ReceiveSharingIntent.instance
           .getInitialMedia()

@@ -52,10 +52,21 @@ class FileManager {
   static Future<String> getDocumentsDirectory() async =>
       Prefs.customDataDir.value ?? await getDefaultDocumentsDirectory();
 
-  static Future<String> getDefaultDocumentsDirectory() async =>
-      '${(await getApplicationDocumentsDirectory()).path}/$appRootDirectoryPrefix';
+  static Future<String> getDefaultDocumentsDirectory() async {
+    if (kIsWeb) {
+      // On web, we can't access the file system directly
+      // Use a virtual path that will be handled by the web storage
+      return '/saber_web_storage';
+    } else {
+      return '${(await getApplicationDocumentsDirectory()).path}/$appRootDirectoryPrefix';
+    }
+  }
 
   static Future<void> migrateDataDir() async {
+    if (kIsWeb) {
+      // File system migration is not supported on web
+      return;
+    }
     final oldDir = Directory(documentsDirectory);
     final newDir = Directory(await getDocumentsDirectory());
     if (oldDir.path == newDir.path) return;
@@ -98,9 +109,13 @@ class FileManager {
 
   @visibleForTesting
   static Future<void> watchRootDirectory() async {
+    if (kIsWeb) {
+      // File watching is not supported on web
+      return;
+    }
     Directory rootDir = Directory(documentsDirectory);
     await rootDir.create(recursive: true);
-    if (Platform.isIOS) return;
+    if (kIsWeb || Platform.isIOS) return;
     rootDir.watch(recursive: true).listen((FileSystemEvent event) {
       final type = event.type == FileSystemEvent.create ||
               event.type == FileSystemEvent.modify ||
@@ -133,6 +148,11 @@ class FileManager {
   /// Returns the contents of the file at [filePath].
   static Future<Uint8List?> readFile(String filePath, {int retries = 3}) async {
     filePath = _sanitisePath(filePath);
+
+    if (kIsWeb) {
+      // On web, we can't read files from the file system
+      return null;
+    }
 
     Uint8List? result;
     final File file = getFile(filePath);
@@ -240,7 +260,7 @@ class FileManager {
       return file;
     }
 
-    if (Platform.isAndroid || Platform.isIOS) {
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       if (isImage) {
         // request permission
         final permissionGranted = await _requestPhotosPermission();
@@ -256,7 +276,7 @@ class FileManager {
       } else {
         // share file
         tempFile = await getTempFile();
-        if (Platform.isIOS || Platform.isMacOS) {
+        if (!kIsWeb && (Platform.isIOS || Platform.isMacOS)) {
           if (!context.mounted) return;
           final box = context.findRenderObject() as RenderBox;
           await SharePlus.instance.share(ShareParams(
@@ -289,6 +309,9 @@ class FileManager {
   }
 
   static Future<bool> _requestPhotosPermission() async {
+    if (kIsWeb) {
+      return false; // No permissions on web
+    }
     if (Platform.isIOS) {
       return await Permission.photosAddOnly.request().isGranted;
     } else if (!Platform.isAndroid) {
@@ -500,6 +523,10 @@ class FileManager {
     final List<String> directories = [], files = [];
 
     final Directory dir = Directory(documentsDirectory + directory);
+    if (kIsWeb) {
+      // On web, we can't check directory existence
+      return DirectoryChildren([], []);
+    }
     if (!dir.existsSync()) return null;
 
     int directoryPrefixLength = directory.endsWith('/')
@@ -608,12 +635,20 @@ class FileManager {
   /// Behaviour is undefined if [filePath] is not a valid path.
   static bool isDirectory(String filePath) {
     filePath = _sanitisePath(filePath);
+    if (kIsWeb) {
+      // On web, we can't check directory existence
+      return false;
+    }
     final Directory directory = Directory(documentsDirectory + filePath);
     return directory.existsSync();
   }
 
   static bool doesFileExist(String filePath) {
     filePath = _sanitisePath(filePath);
+    if (kIsWeb) {
+      // On web, we can't check file existence
+      return false;
+    }
     final File file = getFile(filePath);
     return file.existsSync();
   }

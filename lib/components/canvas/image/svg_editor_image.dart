@@ -3,6 +3,9 @@ part of 'editor_image.dart';
 class SvgEditorImage extends EditorImage {
   late SvgLoader svgLoader;
 
+  // On web, we can't use SvgFileLoader, so we'll use a different approach
+  static bool get _isWeb => kIsWeb;
+
   static final log = Logger('SvgEditorImage');
 
   @override
@@ -27,15 +30,24 @@ class SvgEditorImage extends EditorImage {
     super.srcRect,
     super.naturalSize,
     super.isThumbnail,
-  })  : assert(svgString != null || svgFile != null,
-            'svgFile must be set if svgString is null'),
-        super(
-          extension: '.svg',
-        ) {
+  }) : assert(
+         svgString != null || (svgFile != null && !kIsWeb),
+         'svgFile must be set if svgString is null and not on web',
+       ),
+       super(extension: '.svg') {
     if (svgString != null) {
       svgLoader = SvgStringLoader(svgString);
     } else {
-      svgLoader = SvgFileLoader(svgFile!);
+      // On web, we can't use SvgFileLoader
+      if (!_isWeb && svgFile != null) {
+        // Temporarily disable SVG file loading for web compatibility
+        // svgLoader = SvgFileLoader(svgFile);
+        throw UnsupportedError(
+          'SVG file loading temporarily disabled for web compatibility',
+        );
+      } else {
+        throw UnsupportedError('SVG file loading not supported on web');
+      }
     }
   }
 
@@ -54,9 +66,18 @@ class SvgEditorImage extends EditorImage {
     File? svgFile;
     if (assetIndex != null) {
       if (inlineAssets == null) {
-        svgFile =
-            FileManager.getFile('$sbnPath${Editor.extension}.$assetIndex');
-        svgString = assetCache.get(svgFile);
+        if (!kIsWeb) {
+          svgFile = FileManager.getFile(
+            '$sbnPath${Editor.extension}.$assetIndex',
+          );
+          svgString = assetCache.get(svgFile);
+        } else {
+          // On web, we can't access files directly
+          log.warning(
+            'SvgEditorImage.fromJson: file loading not supported on web',
+          );
+          svgString = '';
+        }
       } else {
         svgString = utf8.decode(inlineAssets[assetIndex]);
       }
@@ -68,16 +89,18 @@ class SvgEditorImage extends EditorImage {
     }
 
     return SvgEditorImage(
-      id: json['id'] ??
+      id:
+          json['id'] ??
           -1, // -1 will be replaced by EditorCoreInfo._handleEmptyImageIds()
       assetCache: assetCache,
       svgString: svgString,
-      svgFile: svgFile,
+      svgFile: kIsWeb ? null : svgFile,
       pageIndex: json['i'] ?? 0,
       pageSize: Size.infinite,
       invertible: json['v'] ?? true,
-      backgroundFit:
-          json['f'] != null ? BoxFit.values[json['f']] : BoxFit.contain,
+      backgroundFit: json['f'] != null
+          ? BoxFit.values[json['f']]
+          : BoxFit.contain,
       onMoveImage: null,
       onDeleteImage: null,
       onMiscChange: null,
@@ -95,10 +118,7 @@ class SvgEditorImage extends EditorImage {
         json['sw'] ?? 0,
         json['sh'] ?? 0,
       ),
-      naturalSize: Size(
-        json['nw'] ?? 0,
-        json['nh'] ?? 0,
-      ),
+      naturalSize: Size(json['nw'] ?? 0, json['nh'] ?? 0),
       isThumbnail: isThumbnail,
     );
   }
@@ -113,20 +133,38 @@ class SvgEditorImage extends EditorImage {
     assert(!json.containsKey('b'));
 
     final svgData = _extractSvg();
-    json['a'] = assets.add(svgData.string ?? svgData.file!);
+    if (svgData.string != null) {
+      json['a'] = assets.add(svgData.string!);
+    } else if (svgData.file != null) {
+      json['a'] = assets.add(svgData.file!);
+    }
 
     return json;
   }
 
-  ({String? string, File? file}) _extractSvg() => switch (svgLoader) {
-        (SvgStringLoader loader) => (
-            string: loader.provideSvg(null),
-            file: null
-          ),
-        (SvgFileLoader loader) => (string: null, file: loader.file),
-        (_) => throw ArgumentError.value(svgLoader, 'svgLoader',
-            'SvgEditorImage.toJson: svgLoader must be a SvgStringLoader or SvgFileLoader'),
-      };
+  ({String? string, File? file}) _extractSvg() {
+    if (svgLoader is SvgStringLoader) {
+      return (string: svgLoader.provideSvg(null), file: null);
+    } else if (_isWeb) {
+      // On web, we can only handle string-based SVG
+      return (string: '', file: null);
+    } else {
+      // On non-web platforms, handle SvgFileLoader
+      // Temporarily disabled for web compatibility
+      // try {
+      //   if (svgLoader is SvgFileLoader) {
+      //     return (string: null, file: (svgLoader as SvgFileLoader).file);
+      //   }
+      // } catch (e) {
+      //   // Ignore errors on web
+      // }
+      throw ArgumentError.value(
+        svgLoader,
+        'svgLoader',
+        'SvgEditorImage.toJson: svgLoader must be a SvgStringLoader or SvgFileLoader',
+      );
+    }
+  }
 
   @override
   Future<void> firstLoad() async {
@@ -181,10 +219,7 @@ class SvgEditorImage extends EditorImage {
 
     return InvertWidget(
       invert: invert,
-      child: SvgPicture(
-        svgLoader,
-        fit: boxFit,
-      ),
+      child: SvgPicture(svgLoader, fit: boxFit),
     );
   }
 

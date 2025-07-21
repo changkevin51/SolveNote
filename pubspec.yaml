@@ -205,6 +205,7 @@ flutter:
     - assets/google_fonts/Fira_Mono/
     - assets/google_fonts/Neucha/
     - assets/audio/
+    - assets/images/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

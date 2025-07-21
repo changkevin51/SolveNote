@@ -283,8 +283,11 @@ abstract class Prefs {
         DateTime.parse('2023-12-10T10:06:31.000Z'));
     lastStorageQuota = PlainPref('lastStorageQuota', null);
 
-    shouldCheckForUpdates = PlainPref('shouldCheckForUpdates',
-        FlavorConfig.shouldCheckForUpdatesByDefault && !Platform.isLinux);
+    shouldCheckForUpdates = PlainPref(
+        'shouldCheckForUpdates',
+        FlavorConfig.shouldCheckForUpdatesByDefault &&
+            !kIsWeb &&
+            !Platform.isLinux);
     shouldAlwaysAlertForUpdates = PlainPref('shouldAlwaysAlertForUpdates',
         (kDebugMode || FlavorConfig.dirty) ? true : false,
         deprecatedKeys: const ['updatesToIgnore']);
@@ -307,7 +310,7 @@ abstract class Prefs {
   }
 
   static bool get isDesktop =>
-      Platform.isLinux || Platform.isWindows || Platform.isMacOS;
+      !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
 }
 
 abstract class IPref<T> extends ValueNotifier<T> {
