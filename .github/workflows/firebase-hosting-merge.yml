@@ -1,0 +1,40 @@
+# .github/workflows/firebase-hosting-merge.yml
+
+name: Deploy to Firebase Hosting on merge
+on:
+  push:
+    branches:
+      - main # This is the branch that triggers the deployment to live
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest # GitHub-hosted runner with Ubuntu OS
+    steps:
+      # Step 1: Checkout your repository code
+      - uses: actions/checkout@v4
+
+      # --- START: Flutter Specific Setup ---
+      # Step 2: Set up Flutter environment
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable' # Use 'stable' channel or your preferred channel
+          # You can also specify a specific Flutter version if needed:
+          # flutter-version: '3.19.0'
+
+      # Step 3: Get Flutter project dependencies
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      # Step 4: Build your Flutter web application
+      - name: Build Flutter Web App
+        run: flutter build web --release
+      # --- END: Flutter Specific Setup ---
+
+      # Step 5: Deploy the built web app to Firebase Hosting
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}' # Provided by GitHub for auth
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_SOLVENOTE_7A7B2 }}' # Your Firebase service account secret
+          channelId: live # Deploys to the live channel of your Firebase Hosting site
+          projectId: solvenote-7a7b2 # Your Firebase project ID
