@@ -281,6 +281,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.8"
+  dart_pubspec_licenses:
+    dependency: transitive
+    description:
+      name: dart_pubspec_licenses
+      sha256: "23ddb78ff9204d08e3109ced67cd3c6c6a066f581b0edf5ee092fc3e1127f4ea"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.4"
   dart_quill_delta:
     dependency: transitive
     description:
@@ -1136,10 +1144,18 @@ packages:
     dependency: "direct main"
     description:
       name: pdfrx
-      sha256: "4640c561aa31598c9c8ff9042675f7c1ecb2ca2b1190dff6e2ecaa677d1bc416"
+      sha256: e13f7a8f3e4d93a2c9e3e2560fb049e84ec341799c4cd510ebaffa145f6f720a
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.35"
+    version: "2.1.0"
+  pdfrx_engine:
+    dependency: transitive
+    description:
+      name: pdfrx_engine
+      sha256: "4cdba7df1ee83e32c572c7721838e67341742be4b597cc1325549bf90f03511f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.9"
   perfect_freehand:
     dependency: "direct main"
     description:
