@@ -8,7 +8,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_quill/flutter_quill.dart' as flutter_quill;
 import 'package:keybinder/keybinder.dart';
 import 'package:logging/logging.dart';
@@ -110,8 +109,18 @@ class Editor extends StatefulWidget {
 class EditorState extends State<Editor> {
   final log = Logger('EditorState');
   final _screenshotController = ScreenshotController();
-  late final MathRecognizer _mathRecognizer =
-      MathRecognizer(dotenv.env['GEMINI_API_KEY']!);
+  late final MathRecognizer? _mathRecognizer = () {
+    final apiKey =
+        const String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+    if (apiKey.isEmpty) {
+      log.warning(
+          'GEMINI_API_KEY not found. Math recognition will be disabled. Use --dart-define=GEMINI_API_KEY=your_key for local development.');
+      return null;
+    }
+    log.info(
+        'Math recognition initialized with API key (length: ${apiKey.length})');
+    return MathRecognizer(apiKey);
+  }();
 
   late EditorCoreInfo coreInfo = EditorCoreInfo(filePath: '');
 
@@ -1463,6 +1472,7 @@ class EditorState extends State<Editor> {
                   : Size.zero,
               transformationController: _transformationController,
               pages: coreInfo.pages,
+              isMathRecognitionAvailable: _mathRecognizer != null,
             ),
         ],
       ),
@@ -2229,6 +2239,17 @@ class EditorState extends State<Editor> {
 
   void _onSolveMathExpression(MathExpression expression) async {
     log.info('Solve button pressed for expression ${expression.id}');
+
+    // Check if math recognizer is available
+    if (_mathRecognizer == null) {
+      setState(() {
+        expression.solveState = MathExpressionSolveState.error;
+        expression.errorMessage =
+            'Math recognition is not available. Please check your API key configuration.';
+      });
+      return;
+    }
+
     setState(() {
       // Hide all other popups
       for (final expr in _detectedExpressions) {
@@ -2242,7 +2263,7 @@ class EditorState extends State<Editor> {
     final imageBytes = await _captureExpression(expression);
 
     if (imageBytes != null) {
-      final result = await _mathRecognizer.recognize(imageBytes);
+      final result = await _mathRecognizer!.recognize(imageBytes);
       if (result != null) {
         setState(() {
           expression.solveState = MathExpressionSolveState.solved;

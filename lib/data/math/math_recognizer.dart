@@ -13,6 +13,13 @@ class MathRecognizer {
   Future<Map<String, String>?> recognize(Uint8List imageBytes) async {
     const url =
         'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+
+    // Validate API key
+    if (_apiKey.isEmpty) {
+      print('Error: API key is empty');
+      return null;
+    }
+
     final headers = {
       'Content-Type': 'application/json',
       'x-goog-api-key': _apiKey,
@@ -43,36 +50,37 @@ class MathRecognizer {
       body: jsonEncode(body),
     );
 
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      final content =
-          jsonResponse['candidates'][0]['content']['parts'][0]['text'];
-      final cleanedContent =
-          content.replaceAll('```json', '').replaceAll('```', '').trim();
-      final Map<String, dynamic> solutionMap = jsonDecode(cleanedContent);
-
-      String cleanLatex(String input) {
-        var result = input.trim();
-        if (result.startsWith(r'\(') && result.endsWith(r'\)')) {
-          return result.substring(2, result.length - 2).trim();
-        }
-        if (result.startsWith(r'$$') && result.endsWith(r'$$')) {
-          return result.substring(2, result.length - 2).trim();
-        }
-        if (result.startsWith(r'$') && result.endsWith(r'$')) {
-          return result.substring(1, result.length - 1).trim();
-        }
-        return result;
-      }
-
-      return {
-        'solution': cleanLatex(solutionMap['solution'] as String),
-        'steps': solutionMap['steps'] as String,
-      };
-    } else {
+    print('API Response Status: ${response.statusCode}');
+    if (response.statusCode != 200) {
       print('Error: ${response.statusCode}');
       print('Body: ${response.body}');
       return null;
     }
+
+    final jsonResponse = jsonDecode(response.body);
+    final content =
+        jsonResponse['candidates'][0]['content']['parts'][0]['text'];
+    final cleanedContent =
+        content.replaceAll('```json', '').replaceAll('```', '').trim();
+    final Map<String, dynamic> solutionMap = jsonDecode(cleanedContent);
+
+    String cleanLatex(String input) {
+      var result = input.trim();
+      if (result.startsWith(r'\(') && result.endsWith(r'\)')) {
+        return result.substring(2, result.length - 2).trim();
+      }
+      if (result.startsWith(r'$$') && result.endsWith(r'$$')) {
+        return result.substring(2, result.length - 2).trim();
+      }
+      if (result.startsWith(r'$') && result.endsWith(r'$')) {
+        return result.substring(1, result.length - 1).trim();
+      }
+      return result;
+    }
+
+    return {
+      'solution': cleanLatex(solutionMap['solution'] as String),
+      'steps': solutionMap['steps'] as String,
+    };
   }
 }

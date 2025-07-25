@@ -39,6 +39,7 @@ class MathExpressionOverlay extends StatelessWidget {
     required this.canvasSize,
     required this.transformationController,
     required this.pages,
+    this.isMathRecognitionAvailable = true,
   });
 
   final List<MathExpression> expressions;
@@ -46,6 +47,7 @@ class MathExpressionOverlay extends StatelessWidget {
   final Size canvasSize;
   final TransformationController transformationController;
   final List<EditorPage> pages;
+  final bool isMathRecognitionAvailable;
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -59,6 +61,7 @@ class MathExpressionOverlay extends StatelessWidget {
           },
           transformationController: transformationController,
           pages: pages,
+          isMathRecognitionAvailable: isMathRecognitionAvailable,
         );
       }).toList(),
     );
@@ -74,6 +77,7 @@ class MathExpressionBoundingBox extends StatefulWidget {
     required this.onTap,
     required this.transformationController,
     required this.pages,
+    this.isMathRecognitionAvailable = true,
   });
 
   final MathExpression expression;
@@ -81,6 +85,7 @@ class MathExpressionBoundingBox extends StatefulWidget {
   final VoidCallback onTap;
   final TransformationController transformationController;
   final List<EditorPage> pages;
+  final bool isMathRecognitionAvailable;
 
   @override
   State<MathExpressionBoundingBox> createState() =>
@@ -249,6 +254,7 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
       double scale, VoidCallback onTap) {
     final theme = Theme.of(context);
     final solution = widget.expression.solution ?? '';
+    final screenWidth = MediaQuery.of(context).size.width;
 
     final textStyle = theme.textTheme.bodyMedium!.copyWith(
       color: theme.colorScheme.onSurface,
@@ -283,33 +289,40 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
         ),
         // Answer text
         Positioned(
-          left: expandedRect.left,
+          left: math.max(16, math.min(expandedRect.left, screenWidth - 200)),
           top: expandedRect.bottom + 4 * scale,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface.withOpacity(0.8),
-              borderRadius: BorderRadius.circular(4),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 3,
-                  offset: const Offset(0, 1),
-                )
-              ],
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: screenWidth - 32,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Answer: ',
-                  style: textStyle,
-                ),
-                Math.tex(
-                  solution,
-                  textStyle: textStyle,
-                )
-              ],
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(4),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
+                  )
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Answer: ',
+                    style: textStyle,
+                  ),
+                  Flexible(
+                    child: Math.tex(
+                      solution,
+                      textStyle: textStyle,
+                    ),
+                  )
+                ],
+              ),
             ),
           ),
         ),
@@ -324,11 +337,14 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
       child: Listener(
         behavior: HitTestBehavior.opaque,
         child: _SolveButton(
-          onPressed: () {
-            developer.log(
-                'Solve button pressed for expression ${widget.expression.id}');
-            widget.onSolve();
-          },
+          onPressed: widget.isMathRecognitionAvailable
+              ? () {
+                  developer.log(
+                      'Solve button pressed for expression ${widget.expression.id}');
+                  widget.onSolve();
+                }
+              : null,
+          isEnabled: widget.isMathRecognitionAvailable,
         ),
       ),
     );
@@ -342,6 +358,7 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
 
   List<Widget> _buildSolvedState(BuildContext context, Rect expandedRect) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
     final spaceAbove = expandedRect.top;
     final spaceBelow = screenHeight - expandedRect.bottom;
 
@@ -351,13 +368,54 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
 
     final maxHeight = (displayAbove ? spaceAbove : spaceBelow) - 20;
 
+    // Calculate popup width and position to avoid overflow
+    const minPopupWidth = 200.0;
+    const maxPopupWidth = 400.0;
+    final preferredWidth =
+        math.min(maxPopupWidth, math.max(minPopupWidth, expandedRect.width));
+
+    // Calculate popup position to keep it within screen bounds
+    double popupLeft = expandedRect.left;
+    double popupWidth = preferredWidth;
+
+    // Debug logging
+    print('Popup positioning debug:');
+    print('  expandedRect.left: ${expandedRect.left}');
+    print('  expandedRect.right: ${expandedRect.right}');
+    print('  screenWidth: $screenWidth');
+    print('  preferredWidth: $preferredWidth');
+    print('  initial popupLeft: $popupLeft');
+
+    // Check if popup would overflow the right edge
+    if (popupLeft + popupWidth > screenWidth - 16) {
+      popupLeft = screenWidth - popupWidth - 16;
+      print('  adjusted popupLeft for right overflow: $popupLeft');
+    }
+
+    // Check if popup would overflow the left edge
+    if (popupLeft < 16) {
+      popupLeft = 16;
+      print('  adjusted popupLeft for left overflow: $popupLeft');
+      // If the popup is too wide, reduce its width
+      if (popupLeft + popupWidth > screenWidth - 16) {
+        popupWidth = screenWidth - popupLeft - 16;
+        print('  reduced popupWidth: $popupWidth');
+      }
+    }
+
+    print('  final popupLeft: $popupLeft, popupWidth: $popupWidth');
+
     final solutionWidget = Positioned(
       top: displayAbove ? null : expandedRect.bottom + 5,
       bottom: displayAbove ? (screenHeight - expandedRect.top + 5) : null,
-      left: 0,
-      width: expandedRect.width,
+      left: popupLeft,
+      width: popupWidth,
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: maxHeight < 0 ? 0 : maxHeight),
+        constraints: BoxConstraints(
+          maxHeight: maxHeight < 0 ? 0 : maxHeight,
+          maxWidth:
+              screenWidth - 32, // Ensure popup doesn't exceed screen width
+        ),
         child: Listener(
           behavior: HitTestBehavior.opaque,
           child: Card(
@@ -407,15 +465,17 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
                       const SizedBox(height: 8),
                       const Divider(),
                       const SizedBox(height: 8),
-                      MarkdownBody(
-                        data: widget.expression.steps!,
-                        builders: {
-                          'math': _MathBuilder(),
-                        },
-                        inlineSyntaxes: [
-                          _MathSyntax(),
-                        ],
-                        extensionSet: md.ExtensionSet.gitHubWeb,
+                      Flexible(
+                        child: MarkdownBody(
+                          data: widget.expression.steps!,
+                          builders: {
+                            'math': _MathBuilder(),
+                          },
+                          inlineSyntaxes: [
+                            _MathSyntax(),
+                          ],
+                          extensionSet: md.ExtensionSet.gitHubWeb,
+                        ),
                       ),
                     ]
                   ],
@@ -451,9 +511,11 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
 class _SolveButton extends StatefulWidget {
   const _SolveButton({
     required this.onPressed,
+    this.isEnabled = true,
   });
 
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
+  final bool isEnabled;
 
   @override
   State<_SolveButton> createState() => _SolveButtonState();
@@ -493,7 +555,7 @@ class _SolveButtonState extends State<_SolveButton>
 
   void _onTapUp(TapUpDetails details) {
     _buttonAnimationController.reverse();
-    widget.onPressed();
+    widget.onPressed?.call();
   }
 
   void _onTapCancel() {
@@ -503,9 +565,9 @@ class _SolveButtonState extends State<_SolveButton>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: _onTapDown,
-      onTapUp: _onTapUp,
-      onTapCancel: _onTapCancel,
+      onTapDown: widget.isEnabled ? _onTapDown : null,
+      onTapUp: widget.isEnabled ? _onTapUp : null,
+      onTapCancel: widget.isEnabled ? _onTapCancel : null,
       child: AnimatedBuilder(
         animation: _buttonAnimationController,
         builder: (context, child) {
@@ -516,27 +578,35 @@ class _SolveButtonState extends State<_SolveButton>
               height: 28,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    Colors.blue.shade600,
-                    Colors.blue.shade700,
-                  ],
+                  colors: widget.isEnabled
+                      ? [
+                          Colors.blue.shade600,
+                          Colors.blue.shade700,
+                        ]
+                      : [
+                          Colors.grey.shade400,
+                          Colors.grey.shade500,
+                        ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
                 borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withValues(alpha: 0.3),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                boxShadow: widget.isEnabled
+                    ? [
+                        BoxShadow(
+                          color: Colors.blue.withValues(alpha: 0.3),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
-              child: const Center(
+              child: Center(
                 child: Text(
                   'Solve',
                   style: TextStyle(
-                    color: Colors.white,
+                    color:
+                        widget.isEnabled ? Colors.white : Colors.grey.shade300,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),

@@ -22,17 +22,13 @@ jobs:
           # You can also specify a specific Flutter version if needed:
           # flutter-version: '3.19.0'
 
-      - name: Create .env file
-        run: echo "${{ secrets.GEMINI_API_KEY }}" > .env
-        working-directory: ${{ github.workspace }}
-
       # Step 3: Get Flutter project dependencies
       - name: Get Flutter dependencies
         run: flutter pub get
 
-      # Step 4: Build your Flutter web application
+      # Step 4: Build Flutter Web App with Gemini API Key
       - name: Build Flutter Web App
-        run: flutter build web --release
+        run: flutter build web --release --dart-define=GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
       # --- END: Flutter Specific Setup ---
 
       # Step 5: Deploy the built web app to Firebase Hosting

@@ -54,3 +54,6 @@ Saber-Linux-Portable.tar.gz
 
 
 .env
+
+run_local.sh
+run_local.bat
