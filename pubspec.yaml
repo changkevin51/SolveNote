@@ -143,7 +143,7 @@ dependencies:
 
   flutter_web_auth_2: ^4.0.0
 
-  pdfrx: ^1.0.85
+  pdfrx: ^2.1.0
   path: ^1.9.1
   flutter_math_fork: ^0.7.4
   image: ^4.5.4
