@@ -123,7 +123,7 @@ dependencies:
 
   fixnum: ^1.1.0
 
-  device_info_plus: ^11.1.1
+  device_info_plus: ^11.5.0
 
   yaru: ^8.0.0
 
