@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:saber/main_common.dart' as common;
 import 'package:saber/data/flavor_config.dart';
 
 Future<void> main(List<String> args) async {
-  await dotenv.load(fileName: ".env");
   FlavorConfig.setup(
     flavor: const String.fromEnvironment('FLAVOR'),
     appStore: const String.fromEnvironment('APP_STORE'),

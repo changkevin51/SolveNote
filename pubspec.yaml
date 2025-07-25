@@ -146,7 +146,6 @@ dependencies:
   pdfrx: ^1.0.85
   path: ^1.9.1
   flutter_math_fork: ^0.7.4
-  flutter_dotenv: ^5.2.1
   image: ^4.5.4
   flutter_markdown: ^0.7.7+1
 
@@ -198,7 +197,6 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - .env
     - assets/google_fonts/
     - assets/google_fonts/Atkinson_Hyperlegible/
     - assets/google_fonts/Dekko/
