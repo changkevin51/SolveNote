@@ -1,22 +1,28 @@
 
-# SolveNote
 
+![SolveNoteBanner](https://github.com/user-attachments/assets/5b779b47-d5f0-4f87-849c-a1709f56978e)
+
+# SolveNote
 AI-powered math notes app with handwriting recognition that solves equations instantly—just write, and it computes. 
 
 ## Overview
 
+### 
+
 SolveNote is a cross-platform notes application designed specifically for math. Built on the foundation of the popular Saber notes app, SolveNote adds powerful math recognition capabilities that can instantly solve handwritten equations and provide step-by-step solutions.
 
-### Key Features
+## Key Features
 
 - Write equations by hand and get instant solutions
-- Full-stack notes app with all the tools you need whether your solving a problem or taking notes for a class
-- Currnetly Available on Android and web (demo). iOS, Windows, macOS, Linux support coming soon!
+- Full-stack notes app with all the tools you need, whether you're solving a problem or taking notes for a class
+- Currently available on Android and web (demo). iOS, Windows, macOS, Linux support coming soon!
 - Synchronize your work across all your devices via Nextcloud
 - Dark mode! Comfortably take notes in any lighting condition
 - Import and annotate PDFs with full math recognition capabilities
 
 ## Math Recognition Features
+
+<img width="837" height="609" alt="Solvenote solution demo" src="https://github.com/user-attachments/assets/969b64ed-2815-43ec-a1ef-5b9789c46ee6" />
 
 - Write your equations/expressions naturally with pen/stylus/finger?
 - Bounding box technology will instantly detect and group related strokes and identify your written equation
