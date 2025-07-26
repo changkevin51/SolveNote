@@ -86,7 +86,7 @@ class TranslationsHomeEn {
       TranslationsHomeTooltipsEn.internal(_root);
   late final TranslationsHomeCreateEn create =
       TranslationsHomeCreateEn.internal(_root);
-  String get welcome => 'Welcome to Saber';
+  String get welcome => 'Welcome to SolveNote';
   String get invalidFormat =>
       'The file you selected is not supported. Please select an sbn, sbn2, sba, or pdf file.';
   String get noFiles => 'No files found';
@@ -135,7 +135,7 @@ class TranslationsSettingsEn {
   late final TranslationsSettingsResetEn reset =
       TranslationsSettingsResetEn.internal(_root);
   String get resyncEverything => 'Resync everything';
-  String get openDataDir => 'Open Saber folder';
+  String get openDataDir => 'Open SolveNote folder';
   late final TranslationsSettingsCustomDataDirEn customDataDir =
       TranslationsSettingsCustomDataDirEn.internal(_root);
   String get autosaveDisabled => 'Never';
@@ -429,7 +429,7 @@ class TranslationsSettingsPrefLabelsEn {
   String get layoutSize => 'Layout type';
   String get customAccentColor => 'Custom accent color';
   String get hyperlegibleFont => 'Atkinson Hyperlegible font';
-  String get shouldCheckForUpdates => 'Check for Saber updates';
+  String get shouldCheckForUpdates => 'Check for SolveNote updates';
   String get shouldAlwaysAlertForUpdates => 'Faster updates';
   String get allowInsecureConnections => 'Allow insecure connections';
   String get editorToolbarAlignment => 'Toolbar position';
@@ -451,7 +451,7 @@ class TranslationsSettingsPrefLabelsEn {
   String get shapeRecognitionDelay => 'Shape recognition delay';
   String get autoStraightenLines => 'Auto straighten lines';
   String get simplifiedHomeLayout => 'Simplified home layout';
-  String get customDataDir => 'Custom Saber folder';
+  String get customDataDir => 'Custom SolveNote folder';
   String get pencilSoundSetting => 'Pencil sound effect';
 }
 
@@ -465,7 +465,7 @@ class TranslationsSettingsPrefDescriptionsEn {
   String get hyperlegibleFont =>
       'Increases legibility for users with low vision';
   String get allowInsecureConnections =>
-      '(Not recommended) Allow Saber to connect to servers with self-signed/untrusted certificates';
+      '(Not recommended) Allow SolveNote to connect to servers with self-signed/untrusted certificates';
   String get preferGreyscale => 'For e-ink displays';
   String get autoClearWhiteboardOnExit =>
       'Clears the whiteboard after you exit the app';
@@ -588,10 +588,10 @@ class TranslationsLoginNcLoginStepEn {
 
   // Translations
   String get whereToStoreData => 'Choose where you want to store your data:';
-  String get saberNcServer => 'Saber\'s Nextcloud server';
+  String get saberNcServer => 'SolveNote\'s Nextcloud server';
   String get otherNcServer => 'Other Nextcloud server';
   String get serverUrl => 'Server URL';
-  String get loginWithSaber => 'Login with Saber';
+  String get loginWithSaber => 'Login with SolveNote';
   String get loginWithNextcloud => 'Login with Nextcloud';
   late final TranslationsLoginNcLoginStepLoginFlowEn loginFlow =
       TranslationsLoginNcLoginStepLoginFlowEn.internal(_root);
@@ -607,7 +607,7 @@ class TranslationsLoginEncLoginStepEn {
   String get enterEncPassword =>
       'To protect your data, please enter your encryption password:';
   String get newToSaber =>
-      'New to Saber? Just enter a new encryption password.';
+      'New to SolveNote? Just enter a new encryption password.';
   String get encPassword => 'Encryption password';
   String get encFaqTitle => 'Frequently asked questions';
   String get wrongEncPassword =>
@@ -653,7 +653,7 @@ class TranslationsProfile$faq$0i1$En {
   // Translations
   String get q => 'How do I change my Nextcloud password?';
   String get a =>
-      'Go to your server website and log in. Then go to Settings > Security > Change password. You\'ll need to log out and log back in to Saber after changing your password.';
+      'Go to your server website and log in. Then go to Settings > Security > Change password. You\'ll need to log out and log back in to SolveNote after changing your password.';
 }
 
 // Path: profile.faq.2
@@ -665,7 +665,7 @@ class TranslationsProfile$faq$0i2$En {
   // Translations
   String get q => 'How do I change my encryption password?';
   String get a =>
-      '0. Make sure syncing is complete (see the sync progress on the home screen).\n1. Log out of Saber.\n2. Go to your server website and delete your \'Saber\' folder. This will delete all your notes from the server.\n3. Log back in to Saber. You can choose a new encryption password when logging in.\n4. Don\'t forget to log out and log back in to Saber on your other devices too.';
+      '0. Make sure syncing is complete (see the sync progress on the home screen).\n1. Log out of SolveNote.\n2. Go to your server website and delete your \'SolveNote\' folder. This will delete all your notes from the server.\n3. Log back in to SolveNote. You can choose a new encryption password when logging in.\n4. Don\'t forget to log out and log back in to SolveNote on your other devices too.';
 }
 
 // Path: profile.faq.3
@@ -677,7 +677,7 @@ class TranslationsProfile$faq$0i3$En {
   // Translations
   String get q => 'How can I delete my account?';
   String get a =>
-      'Tap on the "${_root.profile.quickLinks.deleteAccount}" button above, and login if needed.\nIf you are using the official Saber server, your account will be deleted after a 1 week grace period. You can contact me at adilhanney@disroot.org during this period to cancel the deletion.\nIf you are using a third party server, there might not be an option to delete your account: you\'ll need to consult the server\'s privacy policy for more information.';
+      'Tap on the "${_root.profile.quickLinks.deleteAccount}" button above, and login if needed.\nIf you are using the official SolveNote server, your account will be deleted after a 1 week grace period. You can contact me at adilhanney@disroot.org during this period to cancel the deletion.\nIf you are using a third party server, there might not be an option to delete your account: you\'ll need to consult the server\'s privacy policy for more information.';
 }
 
 // Path: editor.toolbar
@@ -825,7 +825,7 @@ class TranslationsEditorNewerFileFormatEn {
 
   // Translations
   String get readOnlyMode => 'Read-only mode';
-  String get title => 'This note was edited using a newer version of Saber';
+  String get title => 'This note was edited using a newer version of SolveNote';
   String get subtitle =>
       'Editing this note may result in some information being lost. Do you want to ignore this and edit it anyway?';
   String get allowEditing => 'Allow editing';
@@ -888,7 +888,7 @@ class TranslationsLoginNcLoginStepLoginFlowEn {
 
   // Translations
   String get pleaseAuthorize =>
-      'Please authorize Saber to access your Nextcloud account';
+      'Please authorize SolveNote to access your Nextcloud account';
   String get followPrompts =>
       'Please follow the prompts in the Nextcloud interface';
   String get browserDidntOpen => 'Login page didn\'t open? Click here';
@@ -916,7 +916,7 @@ class TranslationsLoginEncLoginStep$encFaq$0i1$En {
   String get q =>
       'I haven\'t set an encryption password yet. Where do I get it?';
   String get a =>
-      'Choose a new encryption password and enter it above.\nSaber will generate your encryption keys from this password automatically.';
+      'Choose a new encryption password and enter it above.\nSolveNote will generate your encryption keys from this password automatically.';
 }
 
 // Path: login.encLoginStep.encFaq.2
