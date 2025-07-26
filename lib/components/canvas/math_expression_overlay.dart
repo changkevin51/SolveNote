@@ -187,10 +187,16 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
 
         if (!widget.expression.isPopupVisible &&
             widget.expression.solveState == MathExpressionSolveState.solved) {
-          return GestureDetector(
-            onTap: widget.onTap,
-            child: _buildSolvedMinimizedState(
-                context, expandedRect, scale, widget.onTap),
+          return Positioned(
+            left: expandedRect.left,
+            top: expandedRect.top,
+            width: expandedRect.width,
+            height: expandedRect.height,
+            child: GestureDetector(
+              onTap: widget.onTap,
+              child: _buildSolvedMinimizedState(
+                  context, expandedRect, scale, widget.onTap),
+            ),
           );
         }
 
@@ -266,8 +272,8 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
       children: [
         // Faint dashed bounding box
         Positioned(
-          left: expandedRect.left,
-          top: expandedRect.top,
+          left: 0,
+          top: 0,
           width: expandedRect.width,
           height: expandedRect.height,
           child: Container(
@@ -289,11 +295,12 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
         ),
         // Answer text
         Positioned(
-          left: math.max(16, math.min(expandedRect.left, screenWidth - 200)),
-          top: expandedRect.bottom + 4 * scale,
+          left: math.max(0,
+              math.min(expandedRect.width / 2 - 100, expandedRect.width - 200)),
+          top: expandedRect.height + 4 * scale,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: screenWidth - 32,
+              maxWidth: math.min(screenWidth - 32, expandedRect.width),
             ),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -375,30 +382,34 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
         math.min(maxPopupWidth, math.max(minPopupWidth, expandedRect.width));
 
     // Calculate popup position to keep it within screen bounds
-    double popupLeft = expandedRect.left;
+    // Since we're inside a Stack that's already positioned at expandedRect,
+    // we need to position relative to that stack (0,0 is the top-left of expandedRect)
+    double popupLeft = (expandedRect.width - preferredWidth) / 2;
     double popupWidth = preferredWidth;
 
     // Debug logging
     print('Popup positioning debug:');
     print('  expandedRect.left: ${expandedRect.left}');
     print('  expandedRect.right: ${expandedRect.right}');
+    print('  expandedRect.center: ${expandedRect.center}');
     print('  screenWidth: $screenWidth');
     print('  preferredWidth: $preferredWidth');
-    print('  initial popupLeft: $popupLeft');
+    print('  relative popupLeft: $popupLeft');
 
-    // Check if popup would overflow the right edge
-    if (popupLeft + popupWidth > screenWidth - 16) {
-      popupLeft = screenWidth - popupWidth - 16;
+    // Check if popup would overflow the right edge of the screen
+    final absolutePopupLeft = expandedRect.left + popupLeft;
+    if (absolutePopupLeft + popupWidth > screenWidth - 16) {
+      popupLeft = (screenWidth - 16 - popupWidth) - expandedRect.left;
       print('  adjusted popupLeft for right overflow: $popupLeft');
     }
 
-    // Check if popup would overflow the left edge
-    if (popupLeft < 16) {
-      popupLeft = 16;
+    // Check if popup would overflow the left edge of the screen
+    if (absolutePopupLeft < 16) {
+      popupLeft = 16 - expandedRect.left;
       print('  adjusted popupLeft for left overflow: $popupLeft');
       // If the popup is too wide, reduce its width
-      if (popupLeft + popupWidth > screenWidth - 16) {
-        popupWidth = screenWidth - popupLeft - 16;
+      if (popupLeft + popupWidth > expandedRect.width) {
+        popupWidth = expandedRect.width - popupLeft;
         print('  reduced popupWidth: $popupWidth');
       }
     }
@@ -406,7 +417,7 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
     print('  final popupLeft: $popupLeft, popupWidth: $popupWidth');
 
     final solutionWidget = Positioned(
-      top: displayAbove ? null : expandedRect.bottom + 5,
+      top: displayAbove ? null : expandedRect.height + 5,
       bottom: displayAbove ? (screenHeight - expandedRect.top + 5) : null,
       left: popupLeft,
       width: popupWidth,
