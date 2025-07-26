@@ -24,6 +24,8 @@ SolveNote is a cross-platform notes application designed specifically for math. 
 
 <img width="837" height="609" alt="Solvenote solution demo" src="https://github.com/user-attachments/assets/969b64ed-2815-43ec-a1ef-5b9789c46ee6" />
 
+###
+
 - Write your equations/expressions naturally with pen/stylus/finger?
 - Bounding box technology will instantly detect and group related strokes and identify your written equation
 - Press `Solve` to get the answer and view detailed solving steps (with LaTeX formatting)
