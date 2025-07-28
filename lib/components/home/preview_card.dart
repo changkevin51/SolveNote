@@ -48,13 +48,18 @@ class _PreviewCardState extends State<PreviewCard> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    final imageFile =
-        FileManager.getFile('${widget.filePath}${Editor.extension}.p');
-    if (kDebugMode && Platform.environment.containsKey('FLUTTER_TEST')) {
-      // Avoid FileImages in tests
-      thumbnail.image = MemoryImage(imageFile.readAsBytesSync());
+    if (kIsWeb) {
+      // On web, we can't use FileImage, so we'll use a fallback
+      thumbnail.image = null;
     } else {
-      thumbnail.image = FileImage(imageFile);
+      final imageFile =
+          FileManager.getFile('${widget.filePath}${Editor.extension}.p');
+      if (kDebugMode && Platform.environment.containsKey('FLUTTER_TEST')) {
+        // Avoid FileImages in tests
+        thumbnail.image = MemoryImage(imageFile.readAsBytesSync());
+      } else {
+        thumbnail.image = FileImage(imageFile);
+      }
     }
   }
 
@@ -107,7 +112,11 @@ class _PreviewCardState extends State<PreviewCard> {
                           duration: const Duration(milliseconds: 300),
                           child: ConstrainedBox(
                             key: ValueKey(thumbnail.updateCount),
-                            constraints: BoxConstraints(minHeight: 100),
+                            constraints: BoxConstraints(
+                              minHeight: kIsWeb
+                                  ? 160
+                                  : 200, // Smaller height on web for fallback thumbnails
+                            ),
                             child: InvertWidget(
                               invert: invert,
                               child: thumbnail.doesImageExist
@@ -157,7 +166,10 @@ class _PreviewCardState extends State<PreviewCard> {
                       ),
                     ],
                   ),
-                  Flexible(
+                  Container(
+                    height: kIsWeb
+                        ? 40
+                        : 60, // Smaller height on web to reduce card size
                     child: Padding(
                       padding: const EdgeInsets.all(8),
                       child: Text(
@@ -247,7 +259,7 @@ class _ThumbnailState extends ChangeNotifier {
   }
 
   bool get doesImageExist => switch (image) {
-        (FileImage fileImage) => fileImage.file.existsSync(),
+        (FileImage fileImage) => kIsWeb ? false : fileImage.file.existsSync(),
         null => false,
         _ => true,
       };

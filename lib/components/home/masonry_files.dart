@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:saber/components/home/preview_card.dart';
 import 'package:saber/data/extensions/change_notifier_extensions.dart';
@@ -42,14 +43,11 @@ class _MasonryFilesState extends State<MasonryFiles> {
     return ValueListenableBuilder(
       valueListenable: isAnythingSelected,
       builder: (context, isAnythingSelected, _) {
-        return Align(
-          alignment: Alignment.bottomCenter,
-          child: PreviewCard(
-            filePath: file,
-            toggleSelection: toggleSelection,
-            selected: widget.selectedFiles.value.contains(file),
-            isAnythingSelected: isAnythingSelected,
-          ),
+        return PreviewCard(
+          filePath: file,
+          toggleSelection: toggleSelection,
+          selected: widget.selectedFiles.value.contains(file),
+          isAnythingSelected: isAnythingSelected,
         );
       },
     );
@@ -61,7 +59,7 @@ class _MasonryFilesState extends State<MasonryFiles> {
 
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      sliver: Prefs.simplifiedHomeLayout.value
+      sliver: (Prefs.simplifiedHomeLayout.value || kIsWeb)
           ? SliverGrid.builder(
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: widget.crossAxisCount,

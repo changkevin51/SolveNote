@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:collapsible/collapsible.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart' as flutter_quill;
@@ -52,6 +52,8 @@ import 'package:saber/data/math/math_recognizer.dart';
 import 'package:saber/data/tools/shape_pen.dart';
 import 'package:saber/i18n/strings.g.dart';
 import 'package:saber/pages/home/whiteboard.dart';
+import 'package:go_router/go_router.dart';
+import 'package:saber/data/routes.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:super_clipboard/super_clipboard.dart';
 import 'package:image/image.dart' as img;
@@ -966,6 +968,14 @@ class EditorState extends State<Editor> {
   Future<void> saveToFile() async {
     if (coreInfo.readOnly) return;
 
+    // Handle web version - show popup instead of saving
+    if (kIsWeb) {
+      if (mounted) {
+        _showWebSaveDialog();
+      }
+      return;
+    }
+
     switch (savingState.value) {
       case SavingState.saved:
         // avoid saving if nothing has changed
@@ -1822,6 +1832,39 @@ class EditorState extends State<Editor> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(t.editor.needsToSaveBeforeExiting),
     ));
+  }
+
+  void _showWebSaveDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Saving Not Supported'),
+          content: const Text(
+            'Saving is not supported on the web version. Please download the app to have access to all features. Work will not be saved if you leave.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                // Go back to home - use a post-frame callback to ensure dialog is closed first
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  // Navigate from the parent context
+                  context.go(HomeRoutes.getRoute(0));
+                });
+              },
+              child: const Text('Go Back to Home'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Widget bottomSheet(BuildContext context) {
