@@ -7,10 +7,6 @@ class FlavorConfig {
   static late final String _appStore;
   static String get appStore => _appStore;
 
-  static late final bool _shouldCheckForUpdatesByDefault;
-  static bool get shouldCheckForUpdatesByDefault =>
-      _shouldCheckForUpdatesByDefault;
-
   static late final bool _dirty;
 
   /// If a build is dirty, it has commits that are ahead of the latest release.
@@ -19,12 +15,10 @@ class FlavorConfig {
   static void setup({
     String flavor = '',
     String appStore = '',
-    bool shouldCheckForUpdatesByDefault = true,
     bool dirty = false,
   }) {
     _flavor = flavor;
     _appStore = appStore;
-    _shouldCheckForUpdatesByDefault = shouldCheckForUpdatesByDefault;
     _dirty = dirty;
   }
 }

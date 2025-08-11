@@ -1,7 +1,5 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:saber/components/navbar/responsive_navbar.dart';
-import 'package:saber/components/settings/update_manager.dart';
 import 'package:saber/components/theming/dynamic_material_app.dart';
 import 'package:saber/pages/home/browse.dart';
 import 'package:saber/pages/home/recent_notes.dart';
@@ -38,7 +36,6 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     DynamicMaterialApp.addFullscreenListener(_setState);
     super.initState();
-    UpdateManager.showUpdateDialog(context);
   }
 
   void _setState() => setState(() {});

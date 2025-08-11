@@ -4,7 +4,6 @@ library;
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:saber/components/settings/update_manager.dart';
 import 'package:saber/data/locales.dart';
 import 'package:saber/data/saber_version.dart';
 import 'package:saber/data/version.dart';
@@ -77,18 +76,6 @@ void main() {
         equals(fromName.buildNumberWithoutRevision));
 
     expect(fromNumber.buildName, equals(fromName.buildName));
-  });
-
-  test('Test that changelog can be downloaded from GitHub', () async {
-    final changelog = await UpdateManager.getChangelog(
-      newestVersion: buildNumber,
-    );
-    expect(changelog, isNotNull,
-        reason:
-            'Changelog can\'t be found on GitHub. Please ignore this test if you haven\'t pushed the latest version yet.');
-    expect(changelog, isNotEmpty);
-    expect(changelog!.contains(dummyChangelog), false,
-        reason: 'Dummy text found in changelog downloaded from GitHub');
   });
 
   test('Test that changelog has been translated', () {

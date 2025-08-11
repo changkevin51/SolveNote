@@ -12,7 +12,6 @@ import 'package:perfect_freehand/perfect_freehand.dart';
 import 'package:saber/components/canvas/_canvas_background_painter.dart';
 import 'package:saber/components/navbar/responsive_navbar.dart';
 import 'package:saber/data/editor/pencil_sound.dart';
-import 'package:saber/data/flavor_config.dart';
 import 'package:saber/data/nextcloud/nextcloud_client_extension.dart';
 import 'package:saber/data/tools/_tool.dart';
 import 'package:saber/data/tools/highlighter.dart';
@@ -159,9 +158,6 @@ abstract class Prefs {
   /// The last storage quota that was fetched from Nextcloud
   static late final PlainPref<Quota?> lastStorageQuota;
 
-  static late final PlainPref<bool> shouldCheckForUpdates;
-  static late final PlainPref<bool> shouldAlwaysAlertForUpdates;
-
   static late final PlainPref<String> locale;
 
   /// The Gemini API key for AI-powered math recognition and solving
@@ -285,15 +281,6 @@ abstract class Prefs {
     fileSyncResyncEverythingDate = PlainPref('fileSyncResyncEverythingDate',
         DateTime.parse('2023-12-10T10:06:31.000Z'));
     lastStorageQuota = PlainPref('lastStorageQuota', null);
-
-    shouldCheckForUpdates = PlainPref(
-        'shouldCheckForUpdates',
-        FlavorConfig.shouldCheckForUpdatesByDefault &&
-            !kIsWeb &&
-            !Platform.isLinux);
-    shouldAlwaysAlertForUpdates = PlainPref('shouldAlwaysAlertForUpdates',
-        (kDebugMode || FlavorConfig.dirty) ? true : false,
-        deprecatedKeys: const ['updatesToIgnore']);
 
     locale = PlainPref('locale', '');
 

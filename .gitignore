@@ -57,3 +57,8 @@ Saber-Linux-Portable.tar.gz
 
 run_local.sh
 run_local.bat
+
+# Flutter Android keystore
+android/key.jks
+android/key.properties
+android\fallback-key.jks
