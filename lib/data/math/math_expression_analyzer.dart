@@ -113,45 +113,50 @@ class MathExpressionAnalyzer {
 
   /// Main analysis method - implements the stroke clustering algorithm
   void _analyzeForMathExpressions() {
-    if (_recentStrokes.isEmpty) {
-      _clearExpressions();
-      return;
-    }
+    try {
+      if (_recentStrokes.isEmpty) {
+        _clearExpressions();
+        return;
+      }
 
-    log('Analyzing ${_recentStrokes.length} strokes for math expressions');
+      log('Analyzing ${_recentStrokes.length} strokes for math expressions');
 
-    // Group all strokes using spatial proximity
-    final groups = _groupAllStrokes(_recentStrokes);
+      // Group all strokes using spatial proximity
+      final groups = _groupAllStrokes(_recentStrokes);
 
-    if (groups.isEmpty) {
-      _clearExpressions();
-      return;
-    }
+      if (groups.isEmpty) {
+        _clearExpressions();
+        return;
+      }
 
-    // Convert groups to math expressions
-    final expressions =
-        groups.where((group) => group.strokes.isNotEmpty).map((group) {
-      final existing = _detectedExpressions.firstWhereOrNull(
-        (e) => e.strokes.every((s) => group.strokes.contains(s)),
-      );
-      if (existing != null) {
-        return existing.copyWith(
+      // Convert groups to math expressions
+      final expressions =
+          groups.where((group) => group.strokes.isNotEmpty).map((group) {
+        final existing = _detectedExpressions.firstWhereOrNull(
+          (e) => e.strokes.every((s) => group.strokes.contains(s)),
+        );
+        if (existing != null) {
+          return existing.copyWith(
+            strokes: group.strokes,
+            boundingBox: group.boundingBox,
+          );
+        }
+        return MathExpression(
+          id: MathExpression.generateId(),
           strokes: group.strokes,
           boundingBox: group.boundingBox,
+          createdAt: DateTime.now(),
         );
-      }
-      return MathExpression(
-        id: MathExpression.generateId(),
-        strokes: group.strokes,
-        boundingBox: group.boundingBox,
-        createdAt: DateTime.now(),
-      );
-    }).toList();
+      }).toList();
 
-    _detectedExpressions = expressions;
-    log('Detected ${expressions.length} math expressions');
+      _detectedExpressions = expressions;
+      log('Detected ${expressions.length} math expressions');
 
-    onExpressionsDetected?.call(_detectedExpressions);
+      onExpressionsDetected?.call(_detectedExpressions);
+    } catch (e) {
+      log('Error analyzing math expressions: $e');
+      _clearExpressions();
+    }
   }
 
   /// Groups strokes based on spatial proximity using an iterative merging algorithm
@@ -159,8 +164,15 @@ class MathExpressionAnalyzer {
     if (allStrokes.isEmpty) return [];
 
     // Start with each stroke as its own group
-    List<StrokeGroup> groups =
-        allStrokes.map((stroke) => StrokeGroup.fromStrokes([stroke])).toList();
+    List<StrokeGroup> groups = [];
+    for (final stroke in allStrokes) {
+      try {
+        groups.add(StrokeGroup.fromStrokes([stroke]));
+      } catch (e) {
+        // Skip strokes that can't be processed due to invalid data
+        continue;
+      }
+    }
 
     // Keep merging groups until no more merges are possible
     bool mergedInThisPass = true;

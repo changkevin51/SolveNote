@@ -64,6 +64,7 @@ home:
 settings: 
   prefCategories: 
     general: General
+    ai: AI & Math
     writing: Writing
     editor: Editor
     performance: Performance
@@ -97,6 +98,7 @@ settings:
     simplifiedHomeLayout: Simplified home layout
     customDataDir: Custom SolveNote folder
     pencilSoundSetting: Pencil sound effect
+    geminiApiKey: Gemini API Key
   prefDescriptions: 
     hyperlegibleFont: Increases legibility for users with low vision
     allowInsecureConnections: (Not recommended) Allow SolveNote to connect to servers with self-signed/untrusted certificates
@@ -116,6 +118,7 @@ settings:
     autoStraightenLines: Straightens long lines without having to use the shape pen
     simplifiedHomeLayout: Sets a fixed height for each note preview
     shouldAlwaysAlertForUpdates: Tell me about updates as soon as they're available
+    geminiApiKey: AI is used to provide detailed step-by-step answers
     pencilSoundSetting: 
       off: No sound
       onButNotInSilentMode: Enabled (unless in silent mode)

@@ -116,13 +116,30 @@ class BoundingBox {
     double maxY = double.negativeInfinity;
 
     for (final stroke in strokes) {
-      // Use the high quality polygon to get accurate bounds
-      final polygon = stroke.highQualityPolygon;
-      for (final point in polygon) {
-        if (point.dx < minX) minX = point.dx;
-        if (point.dx > maxX) maxX = point.dx;
-        if (point.dy < minY) minY = point.dy;
-        if (point.dy > maxY) maxY = point.dy;
+      try {
+        // Use the high quality polygon to get accurate bounds
+        final polygon = stroke.highQualityPolygon;
+        for (final point in polygon) {
+          if (point.dx < minX) minX = point.dx;
+          if (point.dx > maxX) maxX = point.dx;
+          if (point.dy < minY) minY = point.dy;
+          if (point.dy > maxY) maxY = point.dy;
+        }
+      } catch (e) {
+        // If high quality polygon generation fails, fall back to low quality polygon
+        try {
+          final polygon = stroke.lowQualityPolygon;
+          for (final point in polygon) {
+            if (point.dx < minX) minX = point.dx;
+            if (point.dx > maxX) maxX = point.dx;
+            if (point.dy < minY) minY = point.dy;
+            if (point.dy > maxY) maxY = point.dy;
+          }
+        } catch (e2) {
+          // If both polygon generation methods fail, skip this stroke
+          // This prevents the entire math expression analysis from crashing
+          continue;
+        }
       }
     }
 

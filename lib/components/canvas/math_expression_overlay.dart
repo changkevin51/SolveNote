@@ -23,7 +23,7 @@ class _MathBuilder extends MarkdownElementBuilder {
     if (element.tag == 'math') {
       return Math.tex(
         element.textContent,
-        textStyle: preferredStyle,
+        textStyle: const TextStyle(fontSize: 16),
       );
     }
     return super.visitElementAfter(element, preferredStyle);
@@ -129,6 +129,28 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
   void dispose() {
     _animationController.dispose();
     super.dispose();
+  }
+
+  /// Additional LaTeX cleaning for rendering to prevent dollar sign errors
+  String _cleanLatexForRendering(String input) {
+    String result = input.trim();
+
+    // Remove any remaining isolated dollar signs that might interfere with math mode
+    // But preserve escaped dollar signs \$
+    result = result.replaceAllMapped(RegExp(r'(?<!\\)\$'), (match) => '');
+
+    // Remove common LaTeX delimiters if they slipped through
+    if (result.startsWith(r'\(') && result.endsWith(r'\)')) {
+      result = result.substring(2, result.length - 2).trim();
+    }
+    if (result.startsWith(r'$$') && result.endsWith(r'$$')) {
+      result = result.substring(2, result.length - 2).trim();
+    }
+    if (result.startsWith(r'$') && result.endsWith(r'$')) {
+      result = result.substring(1, result.length - 1).trim();
+    }
+
+    return result;
   }
 
   @override
@@ -295,12 +317,21 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
         ),
         // Answer text
         Positioned(
-          left: math.max(0,
-              math.min(expandedRect.width / 2 - 100, expandedRect.width - 200)),
+          left: math.max(
+              0,
+              math.min(
+                  expandedRect.width / 2 - 150,
+                  expandedRect.width -
+                      300)), // Increased from 100/200 to 150/300
           top: expandedRect.height + 4 * scale,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: math.min(screenWidth - 32, expandedRect.width),
+              maxWidth: math.min(
+                  screenWidth - 32,
+                  math.max(
+                      300,
+                      expandedRect.width *
+                          1.5)), // Increased minimum width and made it responsive
             ),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -324,7 +355,7 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
                   ),
                   Flexible(
                     child: Math.tex(
-                      solution,
+                      _cleanLatexForRendering(solution),
                       textStyle: textStyle,
                     ),
                   )
@@ -377,9 +408,14 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
 
     // Calculate popup width and position to avoid overflow
     const minPopupWidth = 200.0;
-    const maxPopupWidth = 400.0;
-    final preferredWidth =
-        math.min(maxPopupWidth, math.max(minPopupWidth, expandedRect.width));
+    const maxPopupWidth = 500.0; // Increased from 400 to allow wider popups
+    final availableScreenWidth = screenWidth - 32; // Account for screen margins
+
+    // Use the larger of the expression width or minimum width, but cap at available screen width
+    final preferredWidth = math.min(
+        availableScreenWidth,
+        math.max(
+            minPopupWidth, math.max(expandedRect.width * 1.5, maxPopupWidth)));
 
     // Calculate popup position to keep it within screen bounds
     // Since we're inside a Stack that's already positioned at expandedRect,
@@ -425,7 +461,8 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
         constraints: BoxConstraints(
           maxHeight: maxHeight < 0 ? 0 : maxHeight,
           maxWidth:
-              screenWidth - 32, // Ensure popup doesn't exceed screen width
+              popupWidth, // Use the calculated popup width instead of screen width
+          minWidth: minPopupWidth,
         ),
         child: Listener(
           behavior: HitTestBehavior.opaque,
@@ -460,7 +497,8 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
                             const SizedBox(width: 8),
                             Expanded(
                               child: Math.tex(
-                                widget.expression.solution!,
+                                _cleanLatexForRendering(
+                                    widget.expression.solution!),
                                 textStyle: TextStyle(
                                   fontSize: 20,
                                   color: Theme.of(context)
@@ -486,6 +524,24 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
                             _MathSyntax(),
                           ],
                           extensionSet: md.ExtensionSet.gitHubWeb,
+                          styleSheet: MarkdownStyleSheet(
+                            p: const TextStyle(fontSize: 16),
+                            h1: const TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.bold),
+                            h2: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
+                            h3: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                            h4: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                            h5: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                            h6: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                            listBullet: const TextStyle(fontSize: 16),
+                            tableBody: const TextStyle(fontSize: 16),
+                            code: const TextStyle(fontSize: 14),
+                          ),
                         ),
                       ),
                     ]

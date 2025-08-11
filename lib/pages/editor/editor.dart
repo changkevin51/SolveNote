@@ -111,18 +111,25 @@ class Editor extends StatefulWidget {
 class EditorState extends State<Editor> {
   final log = Logger('EditorState');
   final _screenshotController = ScreenshotController();
-  late final MathRecognizer? _mathRecognizer = () {
-    final apiKey =
-        const String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+  MathRecognizer? _mathRecognizer;
+
+  void _initializeMathRecognizer() {
+    // Try to get API key from preferences first, fallback to dart-define
+    String apiKey = Prefs.geminiApiKey.value;
+    if (apiKey.isEmpty) {
+      apiKey = const String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+    }
+
     if (apiKey.isEmpty) {
       log.warning(
-          'GEMINI_API_KEY not found. Math recognition will be disabled. Use --dart-define=GEMINI_API_KEY=your_key for local development.');
-      return null;
+          'GEMINI_API_KEY not found. Math recognition will be disabled. Use --dart-define=GEMINI_API_KEY=your_key for local development or set it in Settings > AI & Math.');
+      _mathRecognizer = null;
+      return;
     }
     log.info(
         'Math recognition initialized with API key (length: ${apiKey.length})');
-    return MathRecognizer(apiKey);
-  }();
+    _mathRecognizer = MathRecognizer(apiKey);
+  }
 
   late EditorCoreInfo coreInfo = EditorCoreInfo(filePath: '');
 
@@ -214,6 +221,10 @@ class EditorState extends State<Editor> {
   @override
   void initState() {
     DynamicMaterialApp.addFullscreenListener(_setState);
+
+    // Initialize math recognition
+    _initializeMathRecognizer();
+    Prefs.geminiApiKey.addListener(_initializeMathRecognizer);
 
     // Initialize math expression analyzer
     _mathExpressionAnalyzer = MathExpressionAnalyzer(
@@ -2346,6 +2357,8 @@ class EditorState extends State<Editor> {
     })();
 
     DynamicMaterialApp.removeFullscreenListener(_setState);
+
+    Prefs.geminiApiKey.removeListener(_initializeMathRecognizer);
 
     _delayedSaveTimer?.cancel();
     _watchServerTimer?.cancel();

@@ -14,6 +14,7 @@ import 'package:saber/components/settings/settings_button.dart';
 import 'package:saber/components/settings/settings_color.dart';
 import 'package:saber/components/settings/settings_directory_selector.dart';
 import 'package:saber/components/settings/settings_dropdown.dart';
+import 'package:saber/components/settings/settings_input_field.dart';
 import 'package:saber/components/settings/settings_selection.dart';
 import 'package:saber/components/settings/settings_subtitle.dart';
 import 'package:saber/components/settings/settings_switch.dart';
@@ -328,6 +329,15 @@ class _SettingsPageState extends State<SettingsPage> {
                       : Icons.font_download_off;
                 },
                 pref: Prefs.hyperlegibleFont,
+              ),
+              SettingsSubtitle(subtitle: t.settings.prefCategories.ai),
+              SettingsInputField(
+                title: t.settings.prefLabels.geminiApiKey,
+                subtitle: t.settings.prefDescriptions.geminiApiKey,
+                icon: Icons.smart_toy,
+                pref: Prefs.geminiApiKey,
+                warningText:
+                    "This is a shared Gemini API key for testing purposes only. Rate limits apply universally for all users. For personal use please enter your own api key or generate a free one from aistudio.google.com/apikey.",
               ),
               SettingsSubtitle(subtitle: t.settings.prefCategories.writing),
               SettingsSwitch(

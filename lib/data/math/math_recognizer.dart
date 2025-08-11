@@ -31,7 +31,7 @@ class MathRecognizer {
           "parts": [
             {
               "text":
-                  "Solve the math expression in this image step-by-step. Return a valid JSON object with two keys: 'solution' and 'steps'. The 'solution' key should contain the final answer as a LaTeX string. The 'steps' key should contain a single markdown string with the detailed steps. IMPORTANT: In the markdown, all LaTeX (formulas, variables, symbols) must be enclosed in single dollar signs (e.g., \$x^2 + y^2 = z^2\$). Ensure backslashes in LaTeX are properly escaped for JSON (e.g., '\\frac' becomes '\\\\frac')."
+                  "Solve the math expression in this image step-by-step. Return a valid JSON object with two keys: 'solution' and 'steps'. IMPORTANT: Use proper JSON format with double quotes for all keys and string values (not single quotes). The 'solution' key should contain ONLY the final numerical answer or simplified expression as a clean LaTeX string (NO additional text like 'where n is an integer'). The 'steps' key should contain a single markdown string with the detailed steps, including any necessary explanations about variables or constraints. IMPORTANT: In the markdown, all LaTeX (formulas, variables, symbols) must be enclosed in single dollar signs (e.g., \$x^2 + y^2 = z^2\$). Ensure backslashes in LaTeX are properly escaped for JSON (e.g., '\\frac' becomes '\\\\frac'). Write each step as a complete sentence starting with a capital letter - NEVER start a line with '. ' (period and space). Each line should be a complete thought ending with proper punctuation. When a sentence ends with a math equation, put the period immediately after the closing \$ sign, like: 'The equation becomes \$x = 5\$.' NOT on the next line. Start each new equation on its own line when possible."
             },
             {
               "inline_data": {
@@ -60,27 +60,130 @@ class MathRecognizer {
     final jsonResponse = jsonDecode(response.body);
     final content =
         jsonResponse['candidates'][0]['content']['parts'][0]['text'];
-    final cleanedContent =
-        content.replaceAll('```json', '').replaceAll('```', '').trim();
-    final Map<String, dynamic> solutionMap = jsonDecode(cleanedContent);
+
+    print('Raw AI response: $content');
+
+    // Clean the content more thoroughly
+    String cleanedContent = content.trim();
+
+    // Remove markdown code blocks
+    cleanedContent =
+        cleanedContent.replaceAll('```json', '').replaceAll('```', '').trim();
+
+    // Try to extract JSON from the response if it's wrapped in other text
+    final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(cleanedContent);
+    if (jsonMatch != null) {
+      cleanedContent = jsonMatch.group(0)!;
+    }
+
+    print('Cleaned content for parsing: $cleanedContent');
+
+    late Map<String, dynamic> solutionMap;
+    try {
+      solutionMap = jsonDecode(cleanedContent);
+    } catch (e) {
+      print('JSON parsing error: $e');
+      print('Attempting to fix common JSON issues...');
+
+      // Try to fix common JSON issues
+      String fixedContent = cleanedContent;
+
+      // Fix single quotes to double quotes for JSON keys and string values
+      // First, protect escaped quotes inside strings
+      fixedContent = fixedContent.replaceAll(r"\'", "___ESCAPED_QUOTE___");
+
+      // Replace single quotes with double quotes
+      fixedContent = fixedContent.replaceAll("'", '"');
+
+      // Restore escaped quotes
+      fixedContent = fixedContent.replaceAll("___ESCAPED_QUOTE___", r"\'");
+
+      // Fix unescaped backslashes in LaTeX (but not the ones we just fixed)
+      fixedContent = fixedContent.replaceAllMapped(
+        RegExp(r'\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})'),
+        (match) => '\\\\',
+      );
+
+      print('Fixed content: $fixedContent');
+
+      try {
+        solutionMap = jsonDecode(fixedContent);
+      } catch (e2) {
+        print('Still failed to parse JSON: $e2');
+        return null;
+      }
+    }
 
     String cleanLatex(String input) {
       var result = input.trim();
+
+      // Remove outer LaTeX delimiters
       if (result.startsWith(r'\(') && result.endsWith(r'\)')) {
-        return result.substring(2, result.length - 2).trim();
+        result = result.substring(2, result.length - 2).trim();
       }
       if (result.startsWith(r'$$') && result.endsWith(r'$$')) {
-        return result.substring(2, result.length - 2).trim();
+        result = result.substring(2, result.length - 2).trim();
       }
       if (result.startsWith(r'$') && result.endsWith(r'$')) {
-        return result.substring(1, result.length - 1).trim();
+        result = result.substring(1, result.length - 1).trim();
       }
+
+      // Remove any remaining isolated dollar signs that might interfere with math mode
+      // But preserve escaped dollar signs \$
+      result = result.replaceAllMapped(RegExp(r'(?<!\\)\$'), (match) => '');
+
+      return result;
+    }
+
+    String cleanSteps(String input) {
+      String result = input.trim();
+
+      // Fix lines that start with ". " after equations by moving the period to the end of the previous line
+      // This handles cases like: "equation$\n. Next sentence" -> "equation$. Next sentence"
+      result = result.replaceAllMapped(RegExp(r'\$\n\. '), (match) => '\$. ');
+
+      // Also handle general cases where ". " starts a line
+      result = result.replaceAllMapped(RegExp(r'\n\. '), (match) => '. ');
+
+      // Handle periods that got separated from equations with various whitespace
+      // Match patterns like: "equation$" followed by newline/whitespace and then ". text"
+      result = result.replaceAllMapped(
+          RegExp(r'\$(\s*\n\s*)\. '), (match) => '\$. ');
+
+      // Handle cases where periods are on their own line after equations
+      result =
+          result.replaceAllMapped(RegExp(r'\$\n\.\n'), (match) => '\$.\n\n');
+
+      // Handle cases where the period is at the start of the string
+      if (result.startsWith('. ')) {
+        result = result.substring(2);
+      }
+
+      // Add extra spacing around equations that contain fractions or complex expressions
+      // This helps prevent overlapping of LaTeX content
+      result =
+          result.replaceAllMapped(RegExp(r'(\$[^$]*\\frac[^$]*\$)'), (match) {
+        return '\n${match.group(0)}\n';
+      });
+
+      // Add spacing around display-style equations (those on their own lines)
+      result = result.replaceAllMapped(RegExp(r'\n(\$[^$]+\$)\n'), (match) {
+        return '\n\n${match.group(1)}\n\n';
+      });
+
+      // Clean up excessive newlines but allow for the spacing we just added
+      result = result.replaceAll(RegExp(r'\n{4,}'), '\n\n\n');
+
+      // Remove excessive newlines at the start and end
+      result = result.replaceAll(RegExp(r'^\n+'), '');
+      result = result.replaceAll(RegExp(r'\n+$'), '');
+
       return result;
     }
 
     return {
       'solution': cleanLatex(solutionMap['solution'] as String),
-      'steps': solutionMap['steps'] as String,
+      'steps': cleanSteps(solutionMap['steps'] as String),
     };
   }
 }

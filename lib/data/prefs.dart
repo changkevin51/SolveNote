@@ -164,6 +164,9 @@ abstract class Prefs {
 
   static late final PlainPref<String> locale;
 
+  /// The Gemini API key for AI-powered math recognition and solving
+  static late final PlainPref<String> geminiApiKey;
+
   static void init() {
     _available = true;
 
@@ -293,6 +296,9 @@ abstract class Prefs {
         deprecatedKeys: const ['updatesToIgnore']);
 
     locale = PlainPref('locale', '');
+
+    geminiApiKey =
+        PlainPref('geminiApiKey', 'AIzaSyA5-v6Uy4U3CGYUYKl0ojlXgC1M5J8ArEo');
 
     _migrateEmailToUsername();
   }
