@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest # GitHub-hosted runner with Ubuntu OS
     steps:
       # Step 1: Checkout your repository code
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # --- START: Flutter Specific Setup ---
       # Step 2: Set up Flutter environment
