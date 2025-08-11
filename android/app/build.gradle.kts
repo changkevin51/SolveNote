@@ -62,10 +62,12 @@ android {
         jniLibs {
             // CORRECT WAY: This prevents duplicate library errors without removing the critical file.
             pickFirsts.add("lib/*/libc++_shared.so")
+            pickFirsts.add("lib/*/libc++.so")
         }
         resources {
             // You can leave this exclude here or remove it. The jniLibs one is the important one.
             excludes.add("**/libc++_shared.so")
+            excludes.add("**/libc++.so")
         }
     }
 
