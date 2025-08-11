@@ -2325,6 +2325,10 @@ class EditorState extends State<Editor> {
           expression.steps = result['steps'];
           expression.isPopupVisible = true;
         });
+
+        // Print step-by-step solution to terminal
+        _printSolutionToTerminal(
+            expression.id, result['solution'], result['steps']);
       } else {
         setState(() {
           expression.solveState = MathExpressionSolveState.error;
@@ -2343,6 +2347,111 @@ class EditorState extends State<Editor> {
   void _refreshMathExpressionAnalysis() {
     final allPageStrokes = coreInfo.pages.map((page) => page.strokes).toList();
     _mathExpressionAnalyzer.refreshAnalysis(allPageStrokes);
+  }
+
+  /// Prints the step-by-step solution to the terminal
+  void _printSolutionToTerminal(
+      String expressionId, String? solution, String? steps) {
+    print('\n' + '=' * 80);
+    print('MATH EXPRESSION SOLUTION');
+    print('=' * 80);
+    print('Expression ID: $expressionId');
+    print('Time: ${DateTime.now().toLocal()}');
+    print('-' * 80);
+
+    if (solution != null && solution.isNotEmpty) {
+      print('FINAL ANSWER:');
+      print('$solution');
+      print('-' * 80);
+    }
+
+    if (steps != null && steps.isNotEmpty) {
+      print('STEP-BY-STEP SOLUTION:');
+      print('');
+
+      // Clean up the steps for terminal output (remove markdown and LaTeX formatting)
+      String cleanedSteps = _cleanStepsForTerminal(steps);
+      print(cleanedSteps);
+    }
+
+    print('=' * 80);
+    print('END OF SOLUTION');
+    print('=' * 80 + '\n');
+  }
+
+  /// Cleans the steps for terminal output by removing markdown and LaTeX formatting
+  String _cleanStepsForTerminal(String steps) {
+    String result = steps;
+
+    // First, handle punctuation that comes after LaTeX expressions more comprehensively
+    // This handles cases where punctuation is separated by various whitespace/newlines
+    result = result.replaceAllMapped(RegExp(r'\$([^$]+)\$(\s*\n\s*)([,.;:!?])'),
+        (match) {
+      return '${match.group(1)}${match.group(3)}';
+    });
+
+    // Handle punctuation that's already directly attached
+    result = result.replaceAllMapped(RegExp(r'\$([^$]+)\$([,.;:!?])'), (match) {
+      return '${match.group(1)}${match.group(2)}';
+    });
+
+    // Remove LaTeX dollar signs but keep the content (now that punctuation is properly attached)
+    result = result.replaceAllMapped(RegExp(r'\$([^$]+)\$'), (match) {
+      return match.group(1) ?? '';
+    });
+
+    // Remove markdown headers (handle both line start and after newlines)
+    result = result.replaceAll(RegExp(r'^#{1,6}\s*', multiLine: true), '');
+
+    // Remove markdown bold/italic
+    result = result.replaceAll(RegExp(r'\*\*([^*]+)\*\*'), r'$1');
+    result = result.replaceAll(RegExp(r'\*([^*]+)\*'), r'$1');
+
+    // More aggressive punctuation cleanup - handle any remaining isolated punctuation
+    // This catches punctuation on its own line or with just whitespace
+    result =
+        result.replaceAllMapped(RegExp(r'\n\s*([,.;:!?])\s*(?=\n|$)'), (match) {
+      // Look for the previous line that ends with content and attach the punctuation there
+      final lines =
+          result.substring(0, result.indexOf(match.group(0)!)).split('\n');
+      if (lines.isNotEmpty) {
+        final lastLine = lines.last.trim();
+        if (lastLine.isNotEmpty) {
+          // Replace the isolated punctuation with empty string (we'll attach it to previous line)
+          return '';
+        }
+      }
+      return match.group(1)!; // Keep punctuation if we can't attach it properly
+    });
+
+    // Now go through line by line and attach any punctuation that should be on the previous line
+    final lines = result.split('\n');
+    final cleanedLines = <String>[];
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i].trim();
+
+      // If this line is just punctuation, try to attach it to the previous line
+      if (line.length == 1 && RegExp(r'[,.;:!?]').hasMatch(line)) {
+        if (cleanedLines.isNotEmpty) {
+          cleanedLines[cleanedLines.length - 1] += line;
+        } else {
+          cleanedLines.add(line); // Keep it if there's no previous line
+        }
+      } else if (line.isNotEmpty) {
+        cleanedLines.add(line);
+      } else {
+        cleanedLines.add(''); // Preserve empty lines
+      }
+    }
+
+    result = cleanedLines.join('\n');
+
+    // Clean up excessive whitespace but preserve meaningful line breaks
+    result = result.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    result = result.replaceAll(RegExp(r'[ \t]+'), ' ');
+
+    return result.trim();
   }
 
   @override

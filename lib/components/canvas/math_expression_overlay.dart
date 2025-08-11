@@ -153,6 +153,23 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
     return result;
   }
 
+  /// Calculate the approximate width needed for the answer text
+  double _calculateAnswerWidth(BuildContext context, String solution) {
+    if (solution.isEmpty) return 100.0;
+
+    // Estimate width based on the answer text length and font size
+    // This is an approximation since LaTeX rendering width is complex to calculate precisely
+    const double answerLabelWidth = 80.0; // "Answer: " text width
+    const double avgCharWidth =
+        12.0; // Approximate width per character at 20px font size
+    const double padding = 32.0; // Container padding
+
+    // For LaTeX expressions, use a conservative multiplier
+    final estimatedAnswerWidth = solution.length * avgCharWidth * 1.2;
+
+    return answerLabelWidth + estimatedAnswerWidth + padding;
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -289,6 +306,23 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
       fontSize: 12 * scale,
     );
 
+    // Calculate width needed for answer (scaled down for minimized view)
+    final estimatedAnswerWidth = _calculateAnswerWidth(context, solution) *
+        0.6; // Scale down for smaller text
+    const minWidth = 120.0;
+    final boundingBoxWidth = expandedRect.width;
+
+    // Use the larger of bounding box width, estimated answer width, or minimum width
+    final requiredWidth =
+        math.max(minWidth, math.max(boundingBoxWidth, estimatedAnswerWidth));
+    final containerWidth = math.min(requiredWidth, screenWidth - 32);
+
+    // Center the answer container relative to the bounding box
+    final leftPosition = math.max(
+        -(containerWidth - expandedRect.width) / 2, // Center over bounding box
+        -expandedRect.left + 16 // Don't go off left edge of screen
+        );
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -317,21 +351,12 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
         ),
         // Answer text
         Positioned(
-          left: math.max(
-              0,
-              math.min(
-                  expandedRect.width / 2 - 150,
-                  expandedRect.width -
-                      300)), // Increased from 100/200 to 150/300
+          left: leftPosition,
           top: expandedRect.height + 4 * scale,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: math.min(
-                  screenWidth - 32,
-                  math.max(
-                      300,
-                      expandedRect.width *
-                          1.5)), // Increased minimum width and made it responsive
+              maxWidth: containerWidth,
+              minWidth: minWidth,
             ),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -406,30 +431,31 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
 
     final maxHeight = (displayAbove ? spaceAbove : spaceBelow) - 20;
 
-    // Calculate popup width and position to avoid overflow
-    const minPopupWidth = 200.0;
-    const maxPopupWidth = 500.0; // Increased from 400 to allow wider popups
-    final availableScreenWidth = screenWidth - 32; // Account for screen margins
+    // Calculate the width needed for the answer
+    final solution = widget.expression.solution ?? '';
+    final estimatedAnswerWidth = _calculateAnswerWidth(context, solution);
 
-    // Use the larger of the expression width or minimum width, but cap at available screen width
-    final preferredWidth = math.min(
-        availableScreenWidth,
-        math.max(
-            minPopupWidth, math.max(expandedRect.width * 1.5, maxPopupWidth)));
+    // Set minimum popup width and calculate required width
+    const minPopupWidth = 200.0;
+    final boundingBoxWidth = expandedRect.width;
+
+    // Use the larger of: bounding box width, estimated answer width, or minimum width
+    // Cap at available screen width
+    final availableScreenWidth = screenWidth - 32; // Account for screen margins
+    final requiredWidth = math.max(
+        minPopupWidth, math.max(boundingBoxWidth, estimatedAnswerWidth));
+    final popupWidth = math.min(requiredWidth, availableScreenWidth);
 
     // Calculate popup position to keep it within screen bounds
-    // Since we're inside a Stack that's already positioned at expandedRect,
-    // we need to position relative to that stack (0,0 is the top-left of expandedRect)
-    double popupLeft = (expandedRect.width - preferredWidth) / 2;
-    double popupWidth = preferredWidth;
+    // If the popup is wider than the bounding box, center it over the bounding box
+    double popupLeft = (expandedRect.width - popupWidth) / 2;
 
     // Debug logging
-    print('Popup positioning debug:');
-    print('  expandedRect.left: ${expandedRect.left}');
-    print('  expandedRect.right: ${expandedRect.right}');
-    print('  expandedRect.center: ${expandedRect.center}');
-    print('  screenWidth: $screenWidth');
-    print('  preferredWidth: $preferredWidth');
+    print('Popup width calculation:');
+    print('  boundingBoxWidth: $boundingBoxWidth');
+    print('  estimatedAnswerWidth: $estimatedAnswerWidth');
+    print('  requiredWidth: $requiredWidth');
+    print('  final popupWidth: $popupWidth');
     print('  relative popupLeft: $popupLeft');
 
     // Check if popup would overflow the right edge of the screen
@@ -443,14 +469,9 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
     if (absolutePopupLeft < 16) {
       popupLeft = 16 - expandedRect.left;
       print('  adjusted popupLeft for left overflow: $popupLeft');
-      // If the popup is too wide, reduce its width
-      if (popupLeft + popupWidth > expandedRect.width) {
-        popupWidth = expandedRect.width - popupLeft;
-        print('  reduced popupWidth: $popupWidth');
-      }
     }
 
-    print('  final popupLeft: $popupLeft, popupWidth: $popupWidth');
+    print('  final popupLeft: $popupLeft');
 
     final solutionWidget = Positioned(
       top: displayAbove ? null : expandedRect.height + 5,
@@ -460,8 +481,7 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxHeight: maxHeight < 0 ? 0 : maxHeight,
-          maxWidth:
-              popupWidth, // Use the calculated popup width instead of screen width
+          maxWidth: popupWidth,
           minWidth: minPopupWidth,
         ),
         child: Listener(
@@ -527,17 +547,17 @@ class _MathExpressionBoundingBoxState extends State<MathExpressionBoundingBox>
                           styleSheet: MarkdownStyleSheet(
                             p: const TextStyle(fontSize: 16),
                             h1: const TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold),
+                                fontSize: 16, fontWeight: FontWeight.normal),
                             h2: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
+                                fontSize: 16, fontWeight: FontWeight.normal),
                             h3: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
+                                fontSize: 16, fontWeight: FontWeight.normal),
                             h4: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
+                                fontSize: 16, fontWeight: FontWeight.normal),
                             h5: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
+                                fontSize: 16, fontWeight: FontWeight.normal),
                             h6: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
+                                fontSize: 16, fontWeight: FontWeight.normal),
                             listBullet: const TextStyle(fontSize: 16),
                             tableBody: const TextStyle(fontSize: 16),
                             code: const TextStyle(fontSize: 14),
